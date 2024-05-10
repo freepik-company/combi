@@ -1,0 +1,68 @@
+gcu:
+  global:
+    raw: |
+      datadir="/var/lib/proxysql"
+      
+      admin_variables=
+      {
+        admin_credentials="admin:admin;radmin:radmin"
+        mysql_ifaces="0.0.0.0:6032"
+      }
+    fields:
+      field1: value1
+      field2: ${ENV_VAR}
+    conditions:
+    - name: condition1
+      template: |
+        {{- $config := . -}}
+        {{- printf "%s" $config.metadata.name -}}
+      value: ""
+    actions:
+    - name: action1
+      command: 'echo -e "success"'
+      script: |
+        #!/usr/bin/env bash
+        echo -e "success"
+  configs:
+    example1:
+      raw: |
+        datadir="/var/lib/proxysql"
+
+        admin_variables=
+        {
+          admin_credentials="admin:admin;radmin:radmin"
+          mysql_ifaces="0.0.0.0:6032"
+        }
+      fields:
+        field1: value1
+        field2: ${ENV_VAR}
+
+      conditions:
+      - name: condition1
+        template: |
+          {{- $config := . -}}
+          {{- printf "%s" $config.metadata.name -}}
+        value: ""
+
+      actions:
+      - name: action1
+        command: 'echo -e "success"'
+        script: |
+          #!/usr/bin/env bash
+          echo -e "success"
+
+# gitRepositoryRef: inject by flags or env variables
+#   gitHub: {}
+
+# necesito:
+# - nombre del repo
+# - token de acceso
+# - owner del repo (a lo mejor)
+# - path de la config en el repo
+# - nombre de la configuración específica
+
+# realiza:
+# - el merge de los campos
+# - comprobación del spec de libconfig
+# - comprobación de las conditions
+# - ejecución de las actions
