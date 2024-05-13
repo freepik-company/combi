@@ -1,10 +1,10 @@
 package run
 
 import (
+	"C"
 	"log"
 	"time"
 
-	"gcu/internal/git"
 	"gcu/internal/globals"
 
 	"github.com/spf13/cobra"
@@ -91,5 +91,5 @@ func RunCommand(cmd *cobra.Command, args []string) {
 	/////////////////////////////
 	// EXECUTION FLOW RELATED
 	/////////////////////////////
-	client := git.NewGitHubClient()
+	// client := git.NewGitHubClient()
 }

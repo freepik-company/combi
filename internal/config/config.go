@@ -8,11 +8,14 @@ type Gcu struct {
 }
 
 type GlobalT struct {
-	Conditions []ConditionT `yaml:"conditions"`
-	Actions    []ActionT    `yaml:"actions"`
+	Raw        string            `yaml:"raw"`
+	Fields     map[string]string `yaml:"fields"`
+	Conditions []ConditionT      `yaml:"conditions"`
+	Actions    []ActionT         `yaml:"actions"`
 }
 
 type ConfigT struct {
+	Raw        string            `yaml:"raw"`
 	Fields     map[string]string `yaml:"fields"`
 	Conditions []ConditionT      `yaml:"conditions"`
 	Actions    []ActionT         `yaml:"actions"`
