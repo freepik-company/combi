@@ -3,6 +3,8 @@ module gcu
 go 1.22.3
 
 require (
+	github.com/alecthomas/participle/v2 v2.1.1
+	github.com/alecthomas/repr v0.4.0
 	github.com/google/go-github/v61 v61.0.0
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
