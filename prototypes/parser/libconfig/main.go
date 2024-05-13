@@ -9,6 +9,19 @@ import (
 	"github.com/alecthomas/repr"
 )
 
+const (
+	settingNameRegex                 = `[A-Za-z*][-A-Za-z0-9_*]*`
+	settingValuePrimitiveStringRegex = `(\"([^\"\\]|\\.)*\")`
+	settingValuePrimitiveFloatRegex  = `(([-+]?([0-9]*)?\.[0-9]*([eE][-+]?[0-9]+)?)|([-+]([0-9]+)(\.[0-9]*)?[eE][-+]?[0-9]+))`
+	settingValuePrimitiveHexRegex    = `(0[Xx][0-9A-Fa-f]+(L+)?)`
+	settingValuePrimitiveIntRegex    = `([-+]?[0-9]+(L+)?)`
+	settingValuePrimitiveRegex       = `(` +
+		settingValuePrimitiveStringRegex + `|` +
+		settingValuePrimitiveFloatRegex + `|` +
+		settingValuePrimitiveHexRegex + `|` +
+		settingValuePrimitiveIntRegex + `)`
+)
+
 // ----------------------------------------------------------------
 // LIBCONFIG file parser
 // ----------------------------------------------------------------
@@ -18,11 +31,19 @@ type LIBCONFIG struct {
 }
 
 type SettingT struct {
-	Name  string  `@Name ("="|":")`
-	Value *ValueT `( @@`
-	Group *GroupT ` | @@`
-	Array *ArrayT ` | @@`
-	List  *ListT  ` | @@ )`
+	SetingName   string         `@Name ("="|":")`
+	SettingValue *SettingValueT `@@`
+}
+
+type SettingValueT struct {
+	Primitive *PrimitiveT `( @@ (";"?","?)`
+	Group     *GroupT     ` | @@ (","?)`
+	Array     *ArrayT     ` | @@ (","?)`
+	List      *ListT      ` | @@ (","?))`
+}
+
+type PrimitiveT struct {
+	Value string `@Value`
 }
 
 type GroupT struct {
@@ -30,22 +51,11 @@ type GroupT struct {
 }
 
 type ArrayT struct {
-	Value []*ValueT `"[" @@* "]"`
-}
-
-type ValueT struct {
-	Value string `@Value (";"?","?)`
+	Value []*PrimitiveT `"[" @@* "]"`
 }
 
 type ListT struct {
-	Settings []*SettingListT `"(" @@* ")"`
-}
-
-type SettingListT struct {
-	Value *ValueT `( @@`
-	Group *GroupT ` | @@ (","?)`
-	Array *ArrayT ` | @@ (","?)`
-	List  *ListT  ` | @@ (","?))`
+	List []*SettingValueT `"(" @@* ")"`
 }
 
 func main() {
@@ -58,9 +68,8 @@ func main() {
 	// LIBCONFIG file parser
 	// ----------------------------------------------------------------
 	libconfigLexer := lexer.MustSimple([]lexer.SimpleRule{
-		{Name: `Name`, Pattern: `[A-Za-z*][-A-Za-z0-9_*]*`},
-		{Name: `Value`, Pattern: `(\"([^\"\\]|\\.)*\")|(([-+]?([0-9]*)?\.[0-9]*([eE][-+]?[0-9]+)?)|([-+]([0-9]+)(\.[0-9]*)?[eE][-+]?[0-9]+))|(0[Xx][0-9A-Fa-f]+(L(L)?)?)|([-+]?[0-9]+(L(L)?)?)`},
-		// {Name: `Value`, Pattern: `(\"([^\"\\]|\\.)*\")`},
+		{Name: `Name`, Pattern: settingNameRegex},
+		{Name: `Value`, Pattern: settingValuePrimitiveRegex},
 		{Name: `Equal`, Pattern: `=|:`},
 		{Name: `EndSetting`, Pattern: `;|,`},
 		{Name: `Keys`, Pattern: `{|}`},
