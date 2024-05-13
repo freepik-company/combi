@@ -1,5 +1,12 @@
 datadir="/var/lib/proxysql"
 
+int32:3244,
+int64=3244L;
+float32=1.4,
+hex64=0x823LL,
+hex32=0x8263
+hex322=0x8659826
+
 admin_variables=
 {
   admin_credentials="admin:admin;radmin:radmin"

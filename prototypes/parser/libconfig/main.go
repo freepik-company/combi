@@ -10,11 +10,13 @@ import (
 )
 
 const (
+	commentsRegex                    = `([#][^\n]*)|(\/\/[^\n]*)|(\/\*.*[\n]\*\/)`
+	escapeCharsRegex                 = `((=|:)|(;|,)|({|})|(\[|\])|(\(|\)))`
 	settingNameRegex                 = `[A-Za-z*][-A-Za-z0-9_*]*`
 	settingValuePrimitiveStringRegex = `(\"([^\"\\]|\\.)*\")`
 	settingValuePrimitiveFloatRegex  = `(([-+]?([0-9]*)?\.[0-9]*([eE][-+]?[0-9]+)?)|([-+]([0-9]+)(\.[0-9]*)?[eE][-+]?[0-9]+))`
-	settingValuePrimitiveHexRegex    = `(0[Xx][0-9A-Fa-f]+(L+)?)`
-	settingValuePrimitiveIntRegex    = `([-+]?[0-9]+(L+)?)`
+	settingValuePrimitiveHexRegex    = `(0[Xx][0-9A-Fa-f]+(L{1,2})?)`
+	settingValuePrimitiveIntRegex    = `([-+]?[0-9]+(L{1,2})?)`
 	settingValuePrimitiveRegex       = `(` +
 		settingValuePrimitiveStringRegex + `|` +
 		settingValuePrimitiveFloatRegex + `|` +
@@ -27,7 +29,7 @@ const (
 // ----------------------------------------------------------------
 
 type LIBCONFIG struct {
-	Entries []*SettingT `@@*`
+	Settings []*SettingT `@@*`
 }
 
 type SettingT struct {
@@ -51,7 +53,7 @@ type GroupT struct {
 }
 
 type ArrayT struct {
-	Value []*PrimitiveT `"[" @@* "]"`
+	Primitives []*PrimitiveT `"[" @@* "]"`
 }
 
 type ListT struct {
@@ -70,13 +72,9 @@ func main() {
 	libconfigLexer := lexer.MustSimple([]lexer.SimpleRule{
 		{Name: `Name`, Pattern: settingNameRegex},
 		{Name: `Value`, Pattern: settingValuePrimitiveRegex},
-		{Name: `Equal`, Pattern: `=|:`},
-		{Name: `EndSetting`, Pattern: `;|,`},
-		{Name: `Keys`, Pattern: `{|}`},
-		{Name: `Brackets`, Pattern: `\[|\]`},
-		{Name: `Parentesis`, Pattern: `\(|\)`},
-		{Name: "comments", Pattern: `([#][^\n]*)|(\/\/[^\n]*)|(\/\*.*[\n]\*\/)`},
-		{Name: "whitespace", Pattern: `\s+`},
+		{Name: "EscapeChars", Pattern: escapeCharsRegex},
+		{Name: "Comments", Pattern: commentsRegex},
+		{Name: "whitespace", Pattern: `(\s+)`},
 	})
 	libconfigParser := participle.MustBuild[LIBCONFIG](
 		participle.Lexer(libconfigLexer),
