@@ -1,6 +1,7 @@
 package run
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"gcmerge/internal/config"
 	"gcmerge/internal/encoding/libconfig"
 	"gcmerge/internal/globals"
+	"gcmerge/internal/template"
 
 	"github.com/spf13/cobra"
 )
@@ -138,7 +140,6 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		switch gcmFullConfig.Kind {
 		case "libconfig":
 			{
-
 				configDestination, err := libconfig.DecodeConfig(gcmConfig.TargetConfig)
 				if err != nil {
 					globals.ExecContext.Logger.Errorf("unable to decode target '%s' configuration file: %s", gcmConfig.TargetConfig, err.Error())
@@ -150,7 +151,21 @@ func RunCommand(cmd *cobra.Command, args []string) {
 					continue
 				}
 				libconfig.MergeConfigs(configDestination, configSource)
+
 				// TODO: Check config conditions
+				for _, condition := range gcmConfig.Conditions {
+					result, err := template.EvaluateTemplate(
+						condition.Template,
+						map[string]interface{}{
+							configName: configDestination.Settings,
+						},
+					)
+					if err != nil {
+						globals.ExecContext.Logger.Errorf("unable to evaluate template in '%s' config condition: %s", condition.Name, err.Error())
+						continue
+					}
+					fmt.Println(result)
+				}
 
 				configGlobal, err := libconfig.DecodeConfigBytes([]byte(gcmGlobalConfig.RawConfig))
 				if err != nil {

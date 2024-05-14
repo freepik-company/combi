@@ -45,8 +45,9 @@ configs:
     conditions:
     - name: condition1
       template: |
-        {{- $config := . -}}
-        {{- printf "%s" $config.metadata.name -}}
+        {{- $fullConfig := . -}}
+        {{- $config := $fullConfig.example1 -}}
+        {{- printf "%v" (index $config 0) -}}
       value: ""
 
     actions:
