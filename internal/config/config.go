@@ -3,12 +3,12 @@ package config
 import "gopkg.in/yaml.v3"
 
 type GCMerge struct {
+	Kind    string             `yaml:"kind"`
 	Global  GlobalT            `yaml:"global"`
 	Configs map[string]ConfigT `yaml:"configs"`
 }
 
 type GlobalT struct {
-	Type       string       `yaml:"type"`
 	RawConfig  string       `yaml:"rawConfig"`
 	Conditions []ConditionT `yaml:"conditions"`
 	Actions    []ActionT    `yaml:"actions"`
@@ -16,6 +16,7 @@ type GlobalT struct {
 
 type ConfigT struct {
 	TargetConfig string       `yaml:"targetConfig"`
+	MergedConfig string       `yaml:"mergedConfig"`
 	RawConfig    string       `yaml:"rawConfig"`
 	Conditions   []ConditionT `yaml:"conditions"`
 	Actions      []ActionT    `yaml:"actions"`
@@ -28,9 +29,9 @@ type ConditionT struct {
 }
 
 type ActionT struct {
-	Name    string `yaml:"name"`
-	Command string `yaml:"command"`
-	Script  string `yaml:"script"`
+	Name    string   `yaml:"name"`
+	Command []string `yaml:"command"`
+	Script  string   `yaml:"script"`
 }
 
 func Parse(config []byte) (cfg GCMerge, err error) {

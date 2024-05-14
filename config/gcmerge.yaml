@@ -1,6 +1,6 @@
 # gcmerge configuration file
+kind: libconfig
 global:
-  type: libconfig
   rawConfig: |
     datadir="/var/lib/proxysql"
     
@@ -17,13 +17,17 @@ global:
     value: ""
   actions:
   - name: action1
-    command: 'echo -e "success"'
+    command:
+    - echo
+    - -e
+    - "success in global for you\n"
     script: |
       #!/usr/bin/env bash
       echo -e "success"
 configs:
   example1:
     targetConfig: ./config/samples/libconfig.cnf
+    mergedConfig: ./config/samples/merged.cnf
     rawConfig: |
       datadir="/var/lib/proxysql"
       
@@ -47,23 +51,18 @@ configs:
 
     actions:
     - name: action1
-      command: 'echo -e "success"'
+      command:
+      - echo
+      - -e
+      - "success in config for you\n"
       script: |
         #!/usr/bin/env bash
         echo -e "success"
 
-# gitRepositoryRef: inject by flags or env variables
-#   gitHub: {}
-
+# maybe separate actions in success actions and failure actions
 # necesito:
 # - nombre del repo
 # - token de acceso
 # - owner del repo (a lo mejor)
 # - path de la config en el repo
 # - nombre de la configuración específica
-
-# realiza:
-# - el merge de los campos
-# - comprobación del spec de libconfig
-# - comprobación de las conditions
-# - ejecución de las actions

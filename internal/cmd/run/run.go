@@ -1,9 +1,9 @@
 package run
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"time"
 
 	"gcmerge/internal/config"
@@ -116,32 +116,29 @@ func RunCommand(cmd *cobra.Command, args []string) {
 			globals.ExecContext.Logger.Errorf("unable to get gcmerge config file: %s", err.Error())
 		}
 
-		// TODO: Parse gcmerge config
-		// TODO: Get specific config from config name flag in gcmerge config
-
+		// Parse gcmerge config
 		gcmFullConfig, err := config.Parse(gcmFullConfigBytes)
 		if err != nil {
 			globals.ExecContext.Logger.Errorf("unable to parse gcmerge configuration file: %s", err.Error())
 			continue
 		}
 
-		gcmConfig, ok := gcmFullConfig.Configs[configName] // TODO: replace this line with specific name in flag
+		gcmGlobalConfig := gcmFullConfig.Global
+		gcmConfig, ok := gcmFullConfig.Configs[configName]
 		if !ok {
 			globals.ExecContext.Logger.Errorf("unable to get '%s' configuration in gcmerge configuration file: %s", configName)
 			continue
 		}
 
-		// TODO: expand env variables in rawConfig local and global
-		gcmFullConfig.Global.RawConfig = os.ExpandEnv(gcmFullConfig.Global.RawConfig)
+		// Expand env variables in local and global rawConfig
+		gcmGlobalConfig.RawConfig = os.ExpandEnv(gcmGlobalConfig.RawConfig)
 		gcmConfig.RawConfig = os.ExpandEnv(gcmConfig.RawConfig)
 
-		// TODO: Decode rawConfig and targetConfig
-		// TODO: Merge rawConfig and targetConfig
-		// TODO: Check config conditions
-
-		switch gcmFullConfig.Global.Type {
+		var mergedConfigStr string
+		switch gcmFullConfig.Kind {
 		case "libconfig":
 			{
+
 				configDestination, err := libconfig.DecodeConfig(gcmConfig.TargetConfig)
 				if err != nil {
 					globals.ExecContext.Logger.Errorf("unable to decode target '%s' configuration file: %s", gcmConfig.TargetConfig, err.Error())
@@ -153,23 +150,49 @@ func RunCommand(cmd *cobra.Command, args []string) {
 					continue
 				}
 				libconfig.MergeConfigs(configDestination, configSource)
-				configStr := libconfig.EncodeConfigString(configDestination)
-				fmt.Println(configStr)
+				// TODO: Check config conditions
+
+				configGlobal, err := libconfig.DecodeConfigBytes([]byte(gcmGlobalConfig.RawConfig))
+				if err != nil {
+					globals.ExecContext.Logger.Errorf("unable to decode global raw configuration field: %s", err.Error())
+					continue
+				}
+				libconfig.MergeConfigs(configDestination, configGlobal)
+				// TODO: Check global config conditions
+
+				mergedConfigStr = libconfig.EncodeConfigString(configDestination)
 			}
 		default:
 			{
-				globals.ExecContext.Logger.Errorf("unsuported configuration type: %s", gcmFullConfig.Global.Type)
+				globals.ExecContext.Logger.Errorf("unsuported configuration type: %s", gcmFullConfig.Kind)
 				continue
 			}
 		}
 
-		// TODO: Decode global rawConfig
-		// TODO: Merge global rawConfig and current merged config
-		// TODO: Check global config conditions
+		// Update targetConfig with merged config file
+		err = os.WriteFile(gcmConfig.MergedConfig, []byte(mergedConfigStr), 0644)
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to create '%s' merged configuration file: %s", gcmConfig.MergedConfig, err.Error())
+			continue
+		}
 
-		// TODO: Update targetConfig with merged config file
-
-		// TODO: Make config actions
-		// TODO: Make global config actions
+		// Execute config actions
+		for _, action := range gcmConfig.Actions {
+			command := exec.Command(action.Command[0], action.Command[1:]...)
+			command.Stdout = os.Stdout
+			command.Stderr = os.Stderr
+			if err = command.Run(); err != nil {
+				globals.ExecContext.Logger.Errorf("unable to execute config action '%s': %s", action.Name, err.Error())
+			}
+		}
+		// Execute global actions
+		for _, action := range gcmGlobalConfig.Actions {
+			command := exec.Command(action.Command[0], action.Command[1:]...)
+			command.Stdout = os.Stdout
+			command.Stderr = os.Stderr
+			if err = command.Run(); err != nil {
+				globals.ExecContext.Logger.Errorf("unable to execute global action '%s': %s", action.Name, err.Error())
+			}
+		}
 	}
 }
