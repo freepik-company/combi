@@ -23,6 +23,42 @@ const (
 )
 
 // ----------------------------------------------------------------
+// LIBCONFIG data structure
+// ----------------------------------------------------------------
+
+type LIBCONFIG struct {
+	Settings []*SettingT `@@*`
+}
+
+type SettingT struct {
+	SetingName   string         `@Name ("="|":")`
+	SettingValue *SettingValueT `@@`
+}
+
+type SettingValueT struct {
+	Primitive *PrimitiveT `( @@ (";"?","?)`
+	Group     *GroupT     ` | @@ (","?)`
+	Array     *ArrayT     ` | @@ (","?)`
+	List      *ListT      ` | @@ (","?))`
+}
+
+type PrimitiveT struct {
+	Value string `@Value (","?)`
+}
+
+type ArrayT struct {
+	Primitives []*PrimitiveT `"[" @@* "]"`
+}
+
+type GroupT struct {
+	Settings []*SettingT `"{" @@* "}"`
+}
+
+type ListT struct {
+	SettingValues []*SettingValueT `"(" @@* ")"`
+}
+
+// ----------------------------------------------------------------
 // Decode/Encode LIBCONFIG data structure
 // ----------------------------------------------------------------
 
@@ -137,7 +173,7 @@ func encodeConfigListString(list *ListT, indent int) (configStr string) {
 	}
 
 	configStr += indentStr + "(\n"
-	for _, settingValue := range list.List {
+	for _, settingValue := range list.SettingValues {
 		if settingValue.Primitive != nil {
 			configStr += "  " + settingValue.Primitive.Value + ",\n"
 		}
@@ -166,11 +202,15 @@ func encodeConfigListString(list *ListT, indent int) (configStr string) {
 // ----------------------------------------------------------------
 
 func MergeConfigs(destination *LIBCONFIG, source *LIBCONFIG) {
-	for _, sSetting := range source.Settings {
+	mergeSettings(&destination.Settings, &source.Settings)
+}
+
+func mergeSettings(destination *[]*SettingT, source *[]*SettingT) {
+	for _, sSetting := range *source {
 		// Merge settings with primitive
 		foundSetting := false
 		if sSetting.SettingValue.Primitive != nil {
-			for _, dSetting := range destination.Settings {
+			for _, dSetting := range *destination {
 				if dSetting.SetingName == sSetting.SetingName {
 					foundSetting = true
 					dSetting.SettingValue.Primitive.Value = sSetting.SettingValue.Primitive.Value
@@ -180,7 +220,7 @@ func MergeConfigs(destination *LIBCONFIG, source *LIBCONFIG) {
 
 		// Merge settings with group
 		if sSetting.SettingValue.Group != nil {
-			for _, dSetting := range destination.Settings {
+			for _, dSetting := range *destination {
 				if dSetting.SetingName == sSetting.SetingName {
 					foundSetting = true
 					mergeSettingValueGroups(dSetting.SettingValue.Group, sSetting.SettingValue.Group)
@@ -190,7 +230,7 @@ func MergeConfigs(destination *LIBCONFIG, source *LIBCONFIG) {
 
 		// Merge settings with array
 		if sSetting.SettingValue.Array != nil {
-			for _, dSetting := range destination.Settings {
+			for _, dSetting := range *destination {
 				if dSetting.SetingName == sSetting.SetingName {
 					foundSetting = true
 					mergeSettingValueArrays(dSetting.SettingValue.Array, sSetting.SettingValue.Array)
@@ -200,7 +240,7 @@ func MergeConfigs(destination *LIBCONFIG, source *LIBCONFIG) {
 
 		// Merge settings with list
 		if sSetting.SettingValue.List != nil {
-			for _, dSetting := range destination.Settings {
+			for _, dSetting := range *destination {
 				if dSetting.SetingName == sSetting.SetingName {
 					foundSetting = true
 					mergeSettingValueLists(dSetting.SettingValue.List, sSetting.SettingValue.List)
@@ -210,22 +250,76 @@ func MergeConfigs(destination *LIBCONFIG, source *LIBCONFIG) {
 
 		// Append not found setting
 		if !foundSetting {
-			destination.Settings = append(destination.Settings, sSetting)
+			*destination = append(*destination, sSetting)
+		}
+	}
+}
+
+func mergeSettingValueArrays(destination *ArrayT, source *ArrayT) {
+	if len(source.Primitives) > 0 {
+		for _, sPrimitive := range source.Primitives {
+			found := false
+			for _, dPrimitive := range destination.Primitives {
+				if dPrimitive.Value == sPrimitive.Value {
+					found = true
+				}
+			}
+			if !found {
+				destination.Primitives = append(destination.Primitives, sPrimitive)
+			}
 		}
 	}
 }
 
 func mergeSettingValueGroups(destination *GroupT, source *GroupT) {
-	// TODO: create libconfig groups merge algorith
-	*destination = *source
-}
-
-func mergeSettingValueArrays(destination *ArrayT, source *ArrayT) {
-	// TODO: create libconfig arrays merge algorith
-	*destination = *source
+	if len(source.Settings) > 0 {
+		mergeSettings(&destination.Settings, &source.Settings)
+	}
 }
 
 func mergeSettingValueLists(destination *ListT, source *ListT) {
-	// TODO: create libconfig lists merge algorith
-	*destination = *source
+	if len(source.SettingValues) > 0 {
+		for _, sSettingValue := range source.SettingValues {
+			found := false
+			if sSettingValue.Primitive != nil {
+				for _, dSettingValue := range destination.SettingValues {
+					if dSettingValue.Primitive != nil && sSettingValue.Primitive.Value != dSettingValue.Primitive.Value {
+						found = true
+						dSettingValue.Primitive.Value = sSettingValue.Primitive.Value
+					}
+				}
+			}
+
+			if sSettingValue.Array != nil {
+				for _, dSettingValue := range destination.SettingValues {
+					if dSettingValue.Array != nil {
+						found = true
+						mergeSettingValueArrays(dSettingValue.Array, sSettingValue.Array)
+					}
+				}
+			}
+
+			if sSettingValue.Group != nil {
+				for _, dSettingValue := range destination.SettingValues {
+					if dSettingValue.Group != nil {
+						found = true
+						mergeSettingValueGroups(dSettingValue.Group, sSettingValue.Group)
+					}
+				}
+			}
+
+			if sSettingValue.List != nil {
+				for _, dSettingValue := range destination.SettingValues {
+					if dSettingValue.List != nil {
+						found = true
+						mergeSettingValueLists(dSettingValue.List, sSettingValue.List)
+					}
+				}
+			}
+
+			if !found {
+				destination.SettingValues = append(destination.SettingValues, sSettingValue)
+			}
+		}
+	}
 }
