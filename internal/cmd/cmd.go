@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"gcu/internal/cmd/run"
-	"gcu/internal/cmd/version"
+	"gcmerge/internal/cmd/run"
+	"gcmerge/internal/cmd/version"
 
 	"github.com/spf13/cobra"
 )

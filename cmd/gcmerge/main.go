@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gcu/internal/cmd"
+	"gcmerge/internal/cmd"
 )
 
 func main() {

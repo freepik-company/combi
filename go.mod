@@ -1,4 +1,4 @@
-module gcu
+module gcmerge
 
 go 1.22.3
 

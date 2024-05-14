@@ -1,11 +1,10 @@
 package run
 
 import (
-	"C"
 	"log"
 	"time"
 
-	"gcu/internal/globals"
+	"gcmerge/internal/globals"
 
 	"github.com/spf13/cobra"
 )
@@ -84,12 +83,39 @@ func RunCommand(cmd *cobra.Command, args []string) {
 	if err != nil {
 		globals.ExecContext.Logger.Fatalf(durationParseErrorMessage, err)
 	}
-	_ = duration
 
 	// TODO
 
 	/////////////////////////////
 	// EXECUTION FLOW RELATED
 	/////////////////////////////
+
+	//TODO: Set git repository client to get the gcmerge config file
 	// client := git.NewGitHubClient()
+
+	for {
+		// TODO: Get gcmerge config file from git repository
+		// TODO: Compare current gcmerge config file with download one to decide make the changes (make it if first time)
+		// TODO: Parse gcmerge config
+		// TODO: Get specific config from config name flag in gcmerge config
+
+		// TODO: expand env variables in rawConfig
+
+		// TODO: Decode rawConfig and targetConfig
+		// TODO: Merge rawConfig and targetConfig
+		// TODO: Check config conditions
+
+		// TODO: Decode global rawConfig
+		// TODO: Merge global rawConfig and current merged config
+		// TODO: Check global config conditions
+
+		// TODO: Update targetConfig with merged config file
+
+		// TODO: Make config actions
+		// TODO: Make global config actions
+
+		// sync in x duration again
+		globals.ExecContext.Logger.Infof("Syncing again in %s", duration.String())
+		time.Sleep(duration)
+	}
 }

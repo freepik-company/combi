@@ -1,6 +1,6 @@
-gcu:
+gcmerge:
   global:
-    raw: |
+    rawConfig: |
       datadir="/var/lib/proxysql"
       
       admin_variables=
@@ -8,9 +8,6 @@ gcu:
         admin_credentials="admin:admin;radmin:radmin"
         mysql_ifaces="0.0.0.0:6032"
       }
-    fields:
-      field1: value1
-      field2: ${ENV_VAR}
     conditions:
     - name: condition1
       template: |
@@ -25,7 +22,8 @@ gcu:
         echo -e "success"
   configs:
     example1:
-      raw: |
+      targetConfig: ./config/samples/libconfig.cnf
+      rawConfig: |
         datadir="/var/lib/proxysql"
 
         admin_variables=
@@ -33,9 +31,6 @@ gcu:
           admin_credentials="admin:admin;radmin:radmin"
           mysql_ifaces="0.0.0.0:6032"
         }
-      fields:
-        field1: value1
-        field2: ${ENV_VAR}
 
       conditions:
       - name: condition1

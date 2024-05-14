@@ -2,23 +2,22 @@ package config
 
 import "gopkg.in/yaml.v3"
 
-type Gcu struct {
+type GCMerge struct {
 	Global  GlobalT            `yaml:"global"`
 	Configs map[string]ConfigT `yaml:"configs"`
 }
 
 type GlobalT struct {
-	Raw        string            `yaml:"raw"`
-	Fields     map[string]string `yaml:"fields"`
-	Conditions []ConditionT      `yaml:"conditions"`
-	Actions    []ActionT         `yaml:"actions"`
+	RawConfig  string       `yaml:"rawConfig"`
+	Conditions []ConditionT `yaml:"conditions"`
+	Actions    []ActionT    `yaml:"actions"`
 }
 
 type ConfigT struct {
-	Raw        string            `yaml:"raw"`
-	Fields     map[string]string `yaml:"fields"`
-	Conditions []ConditionT      `yaml:"conditions"`
-	Actions    []ActionT         `yaml:"actions"`
+	TargetConfig string       `yaml:"targetConfig"`
+	RawConfig    string       `yaml:"rawConfig"`
+	Conditions   []ConditionT `yaml:"conditions"`
+	Actions      []ActionT    `yaml:"actions"`
 }
 
 type ConditionT struct {
@@ -33,7 +32,7 @@ type ActionT struct {
 	Script  string `yaml:"script"`
 }
 
-func Parse(config []byte) (cfg Gcu, err error) {
+func Parse(config []byte) (cfg GCMerge, err error) {
 	err = yaml.Unmarshal(config, &cfg)
 	return cfg, err
 }
