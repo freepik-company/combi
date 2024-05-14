@@ -1,3 +1,3 @@
-# Git Config Update (gcu)
+# Git Config Merge (gcmerge)
 
-Git Config Update
+Git Config Merge is a simple client that merge source configuration stored in a git repository with local configuration file.
