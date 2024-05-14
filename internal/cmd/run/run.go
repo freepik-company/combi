@@ -1,9 +1,13 @@
 package run
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"gcmerge/internal/config"
+	"gcmerge/internal/encoding/libconfig"
 	"gcmerge/internal/globals"
 
 	"github.com/spf13/cobra"
@@ -19,6 +23,7 @@ const (
 	disableTraceFlagErrorMessage = "unable to get flag --disable-trace: %s"
 	syncTimeFlagErrorMessage     = "unable to get flag --sync-time: %s"
 	durationParseErrorMessage    = "unable to parse duration: %s"
+	configNameFlagErrorMessage   = "unable to get flag --config-name: %s"
 
 	// Execution flow error messages
 	// getConfigConfigMapErrorMessage     = "unable to get configuration configmap { ns: %s, name: %s }: %s"
@@ -48,6 +53,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String("log-level", "info", "Verbosity level for logs")
 	cmd.Flags().Bool("disable-trace", true, "Disable showing traces in logs")
 	cmd.Flags().String("sync-time", "15s", "Waiting time between group synchronizations (in duration type)")
+	cmd.Flags().String("config-name", "example1", "Configuration name in the configuration list")
 
 	return cmd
 }
@@ -85,6 +91,10 @@ func RunCommand(cmd *cobra.Command, args []string) {
 	}
 
 	// TODO
+	configName, err := cmd.Flags().GetString("config-name")
+	if err != nil {
+		globals.ExecContext.Logger.Fatalf(configNameFlagErrorMessage, err)
+	}
 
 	/////////////////////////////
 	// EXECUTION FLOW RELATED
@@ -94,16 +104,64 @@ func RunCommand(cmd *cobra.Command, args []string) {
 	// client := git.NewGitHubClient()
 
 	for {
-		// TODO: Get gcmerge config file from git repository
-		// TODO: Compare current gcmerge config file with download one to decide make the changes (make it if first time)
+		// sync in x duration again
+		globals.ExecContext.Logger.Infof("Syncing in %s", duration.String())
+		time.Sleep(duration)
+
+		// TODO: Get gcmerge config file from git repository (store in local /tmp/gcmerge/gitcongig.yaml)
+		// TODO: Compare current gcmerge config (/var/lib/gcmerge/gitconfig.yaml) file with download one to decide make the changes (make it if first time)
+
+		gcmFullConfigBytes, err := os.ReadFile("./config/gcmerge.yaml")
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to get gcmerge config file: %s", err.Error())
+		}
+
 		// TODO: Parse gcmerge config
 		// TODO: Get specific config from config name flag in gcmerge config
 
-		// TODO: expand env variables in rawConfig
+		gcmFullConfig, err := config.Parse(gcmFullConfigBytes)
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to parse gcmerge configuration file: %s", err.Error())
+			continue
+		}
+
+		gcmConfig, ok := gcmFullConfig.Configs[configName] // TODO: replace this line with specific name in flag
+		if !ok {
+			globals.ExecContext.Logger.Errorf("unable to get '%s' configuration in gcmerge configuration file: %s", configName)
+			continue
+		}
+
+		// TODO: expand env variables in rawConfig local and global
+		gcmFullConfig.Global.RawConfig = os.ExpandEnv(gcmFullConfig.Global.RawConfig)
+		gcmConfig.RawConfig = os.ExpandEnv(gcmConfig.RawConfig)
 
 		// TODO: Decode rawConfig and targetConfig
 		// TODO: Merge rawConfig and targetConfig
 		// TODO: Check config conditions
+
+		switch gcmFullConfig.Global.Type {
+		case "libconfig":
+			{
+				configDestination, err := libconfig.DecodeConfig(gcmConfig.TargetConfig)
+				if err != nil {
+					globals.ExecContext.Logger.Errorf("unable to decode target '%s' configuration file: %s", gcmConfig.TargetConfig, err.Error())
+					continue
+				}
+				configSource, err := libconfig.DecodeConfigBytes([]byte(gcmConfig.RawConfig))
+				if err != nil {
+					globals.ExecContext.Logger.Errorf("unable to decode '%s' raw configuration field: %s", configName, err.Error())
+					continue
+				}
+				libconfig.MergeConfigs(configDestination, configSource)
+				configStr := libconfig.EncodeConfigString(configDestination)
+				fmt.Println(configStr)
+			}
+		default:
+			{
+				globals.ExecContext.Logger.Errorf("unsuported configuration type: %s", gcmFullConfig.Global.Type)
+				continue
+			}
+		}
 
 		// TODO: Decode global rawConfig
 		// TODO: Merge global rawConfig and current merged config
@@ -113,9 +171,5 @@ func RunCommand(cmd *cobra.Command, args []string) {
 
 		// TODO: Make config actions
 		// TODO: Make global config actions
-
-		// sync in x duration again
-		globals.ExecContext.Logger.Infof("Syncing again in %s", duration.String())
-		time.Sleep(duration)
 	}
 }

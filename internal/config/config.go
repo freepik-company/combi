@@ -8,6 +8,7 @@ type GCMerge struct {
 }
 
 type GlobalT struct {
+	Type       string       `yaml:"type"`
 	RawConfig  string       `yaml:"rawConfig"`
 	Conditions []ConditionT `yaml:"conditions"`
 	Actions    []ActionT    `yaml:"actions"`

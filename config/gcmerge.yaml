@@ -1,50 +1,56 @@
-gcmerge:
-  global:
+# gcmerge configuration file
+global:
+  type: libconfig
+  rawConfig: |
+    datadir="/var/lib/proxysql"
+    
+    admin_variables=
+    {
+      admin_credentials="admin:admin;radmin:radmin"
+      mysql_ifaces="0.0.0.0:6032"
+    }
+  conditions:
+  - name: condition1
+    template: |
+      {{- $config := . -}}
+      {{- printf "%s" $config.metadata.name -}}
+    value: ""
+  actions:
+  - name: action1
+    command: 'echo -e "success"'
+    script: |
+      #!/usr/bin/env bash
+      echo -e "success"
+configs:
+  example1:
+    targetConfig: ./config/samples/libconfig.cnf
     rawConfig: |
       datadir="/var/lib/proxysql"
       
+      array_test=
+      [
+        "item1", "item2", "item3",
+      ]
+
       admin_variables=
       {
         admin_credentials="admin:admin;radmin:radmin"
         mysql_ifaces="0.0.0.0:6032"
       }
+
     conditions:
     - name: condition1
       template: |
         {{- $config := . -}}
         {{- printf "%s" $config.metadata.name -}}
       value: ""
+
     actions:
     - name: action1
       command: 'echo -e "success"'
       script: |
         #!/usr/bin/env bash
         echo -e "success"
-  configs:
-    example1:
-      targetConfig: ./config/samples/libconfig.cnf
-      rawConfig: |
-        datadir="/var/lib/proxysql"
-
-        admin_variables=
-        {
-          admin_credentials="admin:admin;radmin:radmin"
-          mysql_ifaces="0.0.0.0:6032"
-        }
-
-      conditions:
-      - name: condition1
-        template: |
-          {{- $config := . -}}
-          {{- printf "%s" $config.metadata.name -}}
-        value: ""
-
-      actions:
-      - name: action1
-        command: 'echo -e "success"'
-        script: |
-          #!/usr/bin/env bash
-          echo -e "success"
 
 # gitRepositoryRef: inject by flags or env variables
 #   gitHub: {}

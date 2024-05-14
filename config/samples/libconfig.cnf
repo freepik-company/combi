@@ -1,4 +1,7 @@
 
+int32field=2
+int64field=500L
+
 mysql_variables=
 {
   threads=2

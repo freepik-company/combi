@@ -21,15 +21,15 @@ type SettingValueT struct {
 }
 
 type PrimitiveT struct {
-	Value string `@Value`
-}
-
-type GroupT struct {
-	Settings []*SettingT `"{" @@* "}"`
+	Value string `@Value (","?)`
 }
 
 type ArrayT struct {
 	Primitives []*PrimitiveT `"[" @@* "]"`
+}
+
+type GroupT struct {
+	Settings []*SettingT `"{" @@* "}"`
 }
 
 type ListT struct {

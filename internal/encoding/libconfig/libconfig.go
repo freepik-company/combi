@@ -1,7 +1,6 @@
 package libconfig
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/alecthomas/participle/v2"
@@ -26,6 +25,8 @@ const (
 // ----------------------------------------------------------------
 // Decode/Encode LIBCONFIG data structure
 // ----------------------------------------------------------------
+
+// Decode functions
 
 func DecodeConfig(filepath string) (libconfig *LIBCONFIG, err error) {
 	configBytes, err := os.ReadFile(filepath)
@@ -53,21 +54,111 @@ func DecodeConfigBytes(configBytes []byte) (libconfig *LIBCONFIG, err error) {
 	return libconfig, err
 }
 
-func EncodeConfigBytes(config *LIBCONFIG) {
-	var result string
+// Encode functions
+
+func EncodeConfigString(config *LIBCONFIG) (configStr string) {
+	configStr += encodeConfigSettingString(config.Settings, 0)
+	return configStr
+}
+
+func encodeConfigSettingString(settings []*SettingT, indent int) (configStr string) {
+	var indentStr string
+	for i := 0; i < indent; i++ {
+		indentStr += "  "
+	}
+
 	// Encode settings with primitive
-	for _, setting := range config.Settings {
+	for _, setting := range settings {
 		if setting.SettingValue.Primitive != nil {
-			result += setting.SetingName + "=" + setting.SettingValue.Primitive.Value + "\n"
+			configStr += indentStr + setting.SetingName + "=" + setting.SettingValue.Primitive.Value + ",\n"
 		}
 	}
-	result += "\n"
+
+	// Encode settings with Array
+	for _, setting := range settings {
+		if setting.SettingValue.Array != nil {
+			configStr += setting.SetingName + "=" + "\n"
+			configStr += encodeConfigArrayString(setting.SettingValue.Array, indent)
+			configStr += ",\n"
+		}
+	}
 
 	// Encode settings with Group
-	// Encode settings with Array
-	// Encode settings with List
+	for _, setting := range settings {
+		if setting.SettingValue.Group != nil {
+			configStr += setting.SetingName + "=" + "\n"
+			configStr += encodeConfigGroupString(setting.SettingValue.Group, indent)
+			configStr += ",\n"
+		}
+	}
 
-	fmt.Printf("%s", result)
+	// Encode settings with List
+	for _, setting := range settings {
+		if setting.SettingValue.List != nil {
+			configStr += setting.SetingName + "=" + "\n"
+			configStr += encodeConfigListString(setting.SettingValue.List, indent)
+			configStr += ",\n"
+		}
+	}
+
+	return configStr
+}
+
+func encodeConfigArrayString(array *ArrayT, indent int) (configStr string) {
+	var indentStr string
+	for i := 0; i < indent; i++ {
+		indentStr += "  "
+	}
+
+	configStr += indentStr + "[\n" + indentStr + "  "
+	for _, primitive := range array.Primitives {
+		configStr += primitive.Value + ", "
+	}
+	configStr += "\n" + indentStr + "]"
+	return configStr
+}
+
+func encodeConfigGroupString(group *GroupT, indent int) (configStr string) {
+	var indentStr string
+	for i := 0; i < indent; i++ {
+		indentStr += "  "
+	}
+
+	configStr += indentStr + "{\n"
+	configStr += encodeConfigSettingString(group.Settings, indent+1)
+	configStr += indentStr + "}"
+	return configStr
+}
+
+func encodeConfigListString(list *ListT, indent int) (configStr string) {
+	var indentStr string
+	for i := 0; i < indent; i++ {
+		indentStr += "  "
+	}
+
+	configStr += indentStr + "(\n"
+	for _, settingValue := range list.List {
+		if settingValue.Primitive != nil {
+			configStr += "  " + settingValue.Primitive.Value + ",\n"
+		}
+
+		if settingValue.Array != nil {
+			configStr += encodeConfigArrayString(settingValue.Array, indent+1)
+			configStr += ",\n"
+		}
+
+		if settingValue.Group != nil {
+			configStr += encodeConfigGroupString(settingValue.Group, indent+1)
+			configStr += ",\n"
+		}
+
+		if settingValue.List != nil {
+			configStr += encodeConfigListString(settingValue.List, indent+1)
+			configStr += ",\n"
+		}
+	}
+	configStr += indentStr + ")"
+	return configStr
 }
 
 // ----------------------------------------------------------------
