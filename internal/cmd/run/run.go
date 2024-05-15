@@ -125,14 +125,14 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		// Parse gcmerge config
 		gcmFullConfig, err := config.Parse(gcmFullConfigBytes)
 		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to parse gcmerge configuration file: %s", err.Error())
+			globals.ExecContext.Logger.Errorf("unable to parse gcmerge config file: %s", err.Error())
 			continue
 		}
 
 		gcmGlobalConfig := gcmFullConfig.Global
 		gcmLocalConfig, ok := gcmFullConfig.Configs[configNameField]
 		if !ok {
-			globals.ExecContext.Logger.Errorf("unable to get '%s' configuration in gcmerge configuration file: %s", configNameField)
+			globals.ExecContext.Logger.Errorf("unable to get '%s' local configuration in gcmerge config file: %s", configNameField)
 			continue
 		}
 
@@ -144,35 +144,35 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		switch gcmFullConfig.Kind {
 		case "libconfig":
 			{
-				configDestination, err := libconfig.DecodeConfig(gcmLocalConfig.TargetConfig)
+				targetConfig, err := libconfig.DecodeConfig(gcmLocalConfig.TargetConfig)
 				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to decode target '%s' configuration file: %s", gcmLocalConfig.TargetConfig, err.Error())
+					globals.ExecContext.Logger.Errorf("unable to decode '%s' target config file: %s", gcmLocalConfig.TargetConfig, err.Error())
 					continue
 				}
-				configSource, err := libconfig.DecodeConfigBytes([]byte(gcmLocalConfig.RawConfig))
+				localRawConfig, err := libconfig.DecodeConfigBytes([]byte(gcmLocalConfig.RawConfig))
 				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to decode '%s' raw configuration field: %s", configNameField, err.Error())
+					globals.ExecContext.Logger.Errorf("unable to decode '%s' local raw config field: %s", configNameField, err.Error())
 					continue
 				}
-				libconfig.MergeConfigs(configDestination, configSource)
+				libconfig.MergeConfigs(targetConfig, localRawConfig)
 
-				configGlobal, err := libconfig.DecodeConfigBytes([]byte(gcmGlobalConfig.RawConfig))
+				globalRawConfig, err := libconfig.DecodeConfigBytes([]byte(gcmGlobalConfig.RawConfig))
 				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to decode global raw configuration field: %s", err.Error())
+					globals.ExecContext.Logger.Errorf("unable to decode global raw config field: %s", err.Error())
 					continue
 				}
-				libconfig.MergeConfigs(configDestination, configGlobal)
+				libconfig.MergeConfigs(targetConfig, globalRawConfig)
 
 				// TODO: Check config conditions
 				for _, condition := range gcmLocalConfig.Conditions {
 					result, err := template.EvaluateTemplate(
 						condition.Template,
 						map[string]interface{}{
-							configNameField: configDestination.Settings,
+							configNameField: targetConfig.Settings,
 						},
 					)
 					if err != nil {
-						globals.ExecContext.Logger.Errorf("unable to evaluate template in '%s' config condition: %s", condition.Name, err.Error())
+						globals.ExecContext.Logger.Errorf("unable to evaluate template in '%s' local config condition: %s", condition.Name, err.Error())
 						continue
 					}
 					fmt.Println(result)
@@ -183,17 +183,17 @@ func RunCommand(cmd *cobra.Command, args []string) {
 					result, err := template.EvaluateTemplate(
 						condition.Template,
 						map[string]interface{}{
-							configNameField: configDestination.Settings,
+							configNameField: targetConfig.Settings,
 						},
 					)
 					if err != nil {
-						globals.ExecContext.Logger.Errorf("unable to evaluate template in '%s' global condition: %s", condition.Name, err.Error())
+						globals.ExecContext.Logger.Errorf("unable to evaluate template in '%s' global config condition: %s", condition.Name, err.Error())
 						continue
 					}
 					fmt.Println(result)
 				}
 
-				mergedConfigStr = libconfig.EncodeConfigString(configDestination)
+				mergedConfigStr = libconfig.EncodeConfigString(targetConfig)
 			}
 		default:
 			{
@@ -215,7 +215,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 			command.Stdout = os.Stdout
 			command.Stderr = os.Stderr
 			if err = command.Run(); err != nil {
-				globals.ExecContext.Logger.Errorf("unable to execute config action '%s': %s", action.Name, err.Error())
+				globals.ExecContext.Logger.Errorf("unable to execute '%s' local config action: %s", action.Name, err.Error())
 			}
 		}
 		// Execute global actions
@@ -224,7 +224,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 			command.Stdout = os.Stdout
 			command.Stderr = os.Stderr
 			if err = command.Run(); err != nil {
-				globals.ExecContext.Logger.Errorf("unable to execute global action '%s': %s", action.Name, err.Error())
+				globals.ExecContext.Logger.Errorf("unable to execute '%s' global config action: %s", action.Name, err.Error())
 			}
 		}
 	}
