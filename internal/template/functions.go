@@ -43,7 +43,7 @@ func GetFunctionsMap() template.FuncMap {
 
 	// Delete risky functions
 	// Ref: http://masterminds.github.io/sprig/os.html
-	delete(f, "env")
+	// delete(f, "env") // IMPORTANT: i disable this to allow get env vars, but still here the comment to documentation propuses
 	delete(f, "expandenv")
 
 	// Add some extra functionality

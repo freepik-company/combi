@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"gcmerge/internal/conditions"
 	"os"
 
 	"github.com/alecthomas/participle/v2"
@@ -84,8 +83,7 @@ func main() {
 	fmt.Printf("%s\n\n", libconfigParser.String())
 
 	libconfig, err := libconfigParser.ParseString("", string(libconfigConfigBytes))
-	configStruct := conditions.DeepCopy(libconfig)
-	repr.Println(configStruct, repr.Indent("  "), repr.OmitEmpty(true))
+	repr.Println(libconfig, repr.Indent("  "), repr.OmitEmpty(true))
 	if err != nil {
 		panic(err)
 	}

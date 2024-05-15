@@ -2,39 +2,24 @@
 kind: libconfig
 global:
   rawConfig: |
-    datadir="/var/lib/proxysql"
-    
-    admin_variables=
-    {
-      admin_credentials="admin:admin;radmin:radmin"
-      mysql_ifaces="0.0.0.0:6032"
-    }
-  conditions:
-  - name: condition1
-    template: |
-      {{- $config := . -}}
-      {{- printf "%s" $config.metadata.name -}}
-    value: ""
+    array_test=
+    [
+      "item1", "item2", "item3",
+    ]
+  conditions: []
   actions:
-  - name: action1
+  - name: "execute success message global action"
     command:
     - echo
     - -e
     - "success in global for you\n"
-    script: |
-      #!/usr/bin/env bash
-      echo -e "success"
+    script: ""
 configs:
   example1:
     targetConfig: ./config/samples/libconfig.cnf
     mergedConfig: ./config/samples/merged.cnf
     rawConfig: |
       datadir="/var/lib/proxysql"
-      
-      array_test=
-      [
-        "item1", "item2", "item3",
-      ]
 
       admin_variables=
       {
@@ -43,22 +28,38 @@ configs:
       }
 
     conditions:
-    - name: condition1
+    - name: "print root primitive values condition"
       template: |
-        {{- $fullConfig := . -}}
-        {{- $config := $fullConfig.example1 -}}
-        {{- printf "%v" (index $config 0) -}}
+        {{- $config := .example1 -}}
+        {{- range $i, $s := $config -}}
+          {{- if (index $config $i).SettingValue.Primitive -}}
+            {{- printf "%v" (index $config $i).SetingName -}}=
+            {{- printf "%v\n" (index $config $i).SettingValue.Primitive.Value -}}
+          {{- end -}}
+        {{- end -}}
+        {{- printf "----------------------------------------------------------------\n" -}}
       value: ""
+    - name: "search primitive value to check condition"
+      template: |
+        {{- $config := .example1 -}}
+        {{- range $i, $s := $config -}}
+          {{- if (eq (index $config $i).SetingName "int64field") -}}
+            {{- printf "%s" (index $config $i).SettingValue.Primitive.Value -}}
+          {{- end -}}
+        {{- end -}}
+      value: "500L"
+    - name: "search env variable to check condition"
+      template: |
+        {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
+      value: "true"
 
     actions:
-    - name: action1
+    - name: "execute success message config action"
       command:
       - echo
       - -e
       - "success in config for you\n"
-      script: |
-        #!/usr/bin/env bash
-        echo -e "success"
+      script: ""
 
 # maybe separate actions in success actions and failure actions
 # necesito:
