@@ -140,6 +140,8 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		gcmLocalConfig.RawConfig = os.ExpandEnv(gcmLocalConfig.RawConfig)
 
 		var mergedConfigStr string
+		var evalLocalConditionsSuccess bool
+		var evalGlobalConditionsSuccess bool
 		switch gcmFullConfig.Kind {
 		case "libconfig":
 			{
@@ -162,18 +164,17 @@ func RunCommand(cmd *cobra.Command, args []string) {
 				}
 				libconfig.MergeConfigs(targetConfig, globalRawConfig)
 
-				// Check config conditions
+				// Check local config conditions
 				targetConfigMap := libconfig.ConfigToMap(targetConfig)
-				err = conditions.RunConditions(&gcmLocalConfig.Conditions, targetConfigMap)
+				evalLocalConditionsSuccess, err = conditions.EvalConditions(&gcmLocalConfig.Conditions, &targetConfigMap)
 				if err != nil {
 					globals.ExecContext.Logger.Errorf("unable to evaluate local conditions: %s", err.Error())
-					continue
 				}
 
-				err = conditions.RunConditions(&gcmGlobalConfig.Conditions, targetConfigMap)
+				// Check global config conditions
+				evalGlobalConditionsSuccess, err = conditions.EvalConditions(&gcmGlobalConfig.Conditions, &targetConfigMap)
 				if err != nil {
 					globals.ExecContext.Logger.Errorf("unable to evaluate global conditions: %s", err.Error())
-					continue
 				}
 
 				mergedConfigStr = libconfig.EncodeConfigString(targetConfig)
@@ -185,31 +186,34 @@ func RunCommand(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		// Update targetConfig with merged config file
-		err = os.WriteFile(gcmLocalConfig.MergedConfig, []byte(mergedConfigStr), 0644)
-		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to create '%s' merged configuration file: %s", gcmLocalConfig.MergedConfig, err.Error())
-			continue
-		}
+		// Execute local+global actions
+		if evalLocalConditionsSuccess && evalGlobalConditionsSuccess {
+			// Update targetConfig with merged config file
+			err = os.WriteFile(gcmLocalConfig.MergedConfig, []byte(mergedConfigStr), 0644)
+			if err != nil {
+				globals.ExecContext.Logger.Errorf("unable to create '%s' merged config file: %s", gcmLocalConfig.MergedConfig, err.Error())
+				continue
+			}
 
-		// Execute config actions
-		err = actions.RunActions(&gcmLocalConfig.Actions.OnSuccess)
-		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to execute local success actions: %s", err.Error())
-		}
-		err = actions.RunActions(&gcmLocalConfig.Actions.OnFailure)
-		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to execute local failure actions: %s", err.Error())
-		}
+			err = actions.RunActions(&gcmLocalConfig.Actions.OnSuccess)
+			if err != nil {
+				globals.ExecContext.Logger.Errorf("unable to execute local success actions: %s", err.Error())
+			}
 
-		// Execute global actions
-		err = actions.RunActions(&gcmGlobalConfig.Actions.OnSuccess)
-		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to execute global success actions: %s", err.Error())
-		}
-		err = actions.RunActions(&gcmGlobalConfig.Actions.OnFailure)
-		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to execute global failure actions: %s", err.Error())
+			err = actions.RunActions(&gcmGlobalConfig.Actions.OnSuccess)
+			if err != nil {
+				globals.ExecContext.Logger.Errorf("unable to execute global success actions: %s", err.Error())
+			}
+		} else {
+			err = actions.RunActions(&gcmLocalConfig.Actions.OnFailure)
+			if err != nil {
+				globals.ExecContext.Logger.Errorf("unable to execute local failure actions: %s", err.Error())
+			}
+
+			err = actions.RunActions(&gcmGlobalConfig.Actions.OnFailure)
+			if err != nil {
+				globals.ExecContext.Logger.Errorf("unable to execute global failure actions: %s", err.Error())
+			}
 		}
 	}
 }
