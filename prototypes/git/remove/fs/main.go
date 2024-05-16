@@ -48,6 +48,7 @@ func main() {
 	storedHash := ""
 	currentHash := ""
 	repoPath := "/tmp/repo"
+	repoFilePath := "config/gcmerge.yaml"
 
 	for {
 		repo, err := git.PlainClone(repoPath, false,
@@ -71,7 +72,14 @@ func main() {
 		currentHash = headRef.Hash().String()
 		if storedHash != currentHash {
 			fmt.Printf("the HEAD hash change from '%s' to %s\n", storedHash, currentHash)
+
 			storedHash = currentHash
+
+			file, err := os.ReadFile(repoPath + "/" + repoFilePath)
+			if err != nil {
+				log.Fatalf("unable to get config file in local repository: %s", err.Error())
+			}
+			fmt.Print(string(file))
 		}
 
 		if err = os.RemoveAll(repoPath); err != nil {
