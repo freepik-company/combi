@@ -55,7 +55,12 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String("log-level", "info", "Verbosity level for logs")
 	cmd.Flags().Bool("disable-trace", true, "Disable showing traces in logs")
 	cmd.Flags().String("sync-time", "15s", "Waiting time between group synchronizations (in duration type)")
-	cmd.Flags().String("config-name-field", "example1", "Configuration name in the configuration list")
+	cmd.Flags().String("config-field", "example1", "Configuration name in the gcmerge configuration map")
+	cmd.Flags().String("source-type", "git", "Source where find gcmerge configuration")
+	cmd.Flags().String("source-config-filepath", "config/gcmerge.yaml", "Source gcmerge configuration filepath")
+	cmd.Flags().String("git-ssh-url", "git@github.com:sebastocorp/gcmerge.git", "Git repository ssh url")
+	cmd.Flags().String("git-sshkey-filepath", "/home/svargas/.ssh/id_rsa_github", "Ssh private key filepath for git repository")
+	cmd.Flags().String("git-branch", "main", "Git branch repository")
 
 	return cmd
 }
@@ -93,9 +98,34 @@ func RunCommand(cmd *cobra.Command, args []string) {
 	}
 
 	// TODO
-	configNameField, err := cmd.Flags().GetString("config-name-field")
+	configNameField, err := cmd.Flags().GetString("config-field")
 	if err != nil {
 		globals.ExecContext.Logger.Fatalf(configNameFieldFlagErrorMessage, err)
+	}
+
+	sourceType, err := cmd.Flags().GetString("source-type")
+	if err != nil {
+		globals.ExecContext.Logger.Fatalf("%s", err)
+	}
+
+	sourceConfigFilepath, err := cmd.Flags().GetString("source-config-filepath")
+	if err != nil {
+		globals.ExecContext.Logger.Fatalf("%s", err)
+	}
+
+	gitSshUrl, err := cmd.Flags().GetString("git-ssh-url")
+	if err != nil {
+		globals.ExecContext.Logger.Fatalf("%s", err)
+	}
+
+	gitSshKeyFilepath, err := cmd.Flags().GetString("git-sshkey-filepath")
+	if err != nil {
+		globals.ExecContext.Logger.Fatalf("%s", err)
+	}
+
+	gitBranch, err := cmd.Flags().GetString("git-branch")
+	if err != nil {
+		globals.ExecContext.Logger.Fatalf("%s", err)
 	}
 
 	/////////////////////////////
@@ -108,11 +138,11 @@ func RunCommand(cmd *cobra.Command, args []string) {
 	}
 
 	source := git.Git{
-		SshKeyFilepath:     "/home/svargas/.ssh/id_rsa_github",
-		RepoSshUrl:         "git@github.com:sebastocorp/gcmerge.git",
-		RepoBranch:         "main",
-		RepoPath:           "/tmp/gcmerge/repo",
-		RepoConfigFilepath: "config/gcmerge.yaml",
+		SshKeyFilepath:     gitSshKeyFilepath,
+		RepoSshUrl:         gitSshUrl,
+		RepoBranch:         gitBranch,
+		RepoPath:           gcmTmpPath + "/repo",
+		RepoConfigFilepath: sourceConfigFilepath,
 	}
 
 	firstLoop := true
@@ -124,14 +154,33 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		}
 		firstLoop = false
 
-		gcmFullConfigBytes, err := source.GetConfig()
-		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to get gcmerge configuration: %s", err.Error())
-			continue
-		}
+		var gcmFullConfigBytes []byte
+		switch sourceType {
+		case "git":
+			{
+				gcmFullConfigBytes, err = source.GetConfig()
+				if err != nil {
+					globals.ExecContext.Logger.Errorf("unable to get git gcmerge configuration: %s", err.Error())
+					continue
+				}
 
-		if !source.NeedUpdate() {
-			continue
+				if !source.NeedUpdate() {
+					continue
+				}
+			}
+		case "local":
+			{
+				gcmFullConfigBytes, err = os.ReadFile(sourceConfigFilepath)
+				if err != nil {
+					globals.ExecContext.Logger.Errorf("unable to get local gcmerge configuration: %s", err.Error())
+					continue
+				}
+			}
+		default:
+			{
+				globals.ExecContext.Logger.Errorf("unsuported source type: %s", sourceType)
+				continue
+			}
 		}
 
 		// Parse gcmerge config
