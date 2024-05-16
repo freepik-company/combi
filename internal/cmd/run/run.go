@@ -104,7 +104,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 
 	gcmTmpPath := "/tmp/gcmerge"
 	if err = os.MkdirAll(gcmTmpPath, 0744); err != nil {
-		globals.ExecContext.Logger.Fatalf("unable to create '%s' dir: %s", gcmTmpPath, err)
+		globals.ExecContext.Logger.Fatalf("unable to create '%s' tmp dir: %s", gcmTmpPath, err)
 	}
 
 	source := git.Git{
