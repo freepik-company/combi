@@ -29,12 +29,8 @@ configs:
       mandatory:
       - name: "search primitive value to check condition"
         template: |
-          {{- $config := .example1 -}}
-          {{- range $i, $s := $config -}}
-            {{- if (eq (index $config $i).SetingName "int64field") -}}
-              {{- printf "%s" (index $config $i).SettingValue.Primitive.Value -}}
-            {{- end -}}
-          {{- end -}}
+          {{- $config := . -}}
+          {{- printf "%s" $config.int64field -}}
         value: "500L"
       - name: "search env variable to check condition"
         template: |
@@ -43,14 +39,10 @@ configs:
       optional:
       - name: "print root primitive values condition"
         template: |
-          {{- $config := .example1 -}}
-          {{- range $i, $s := $config -}}
-            {{- if (index $config $i).SettingValue.Primitive -}}
-              {{- printf "%v" (index $config $i).SetingName -}}=
-              {{- printf "%v\n" (index $config $i).SettingValue.Primitive.Value -}}
-            {{- end -}}
+          {{- $config := . -}}
+          {{- range $k, $v := $config.array_test -}}
+            [{{- printf "%v" $k -}}] => {{- printf "%v, " $v -}}
           {{- end -}}
-          {{- printf "----------------------------------------------------------------\n" -}}
         value: ""
 
     actions:
@@ -68,11 +60,3 @@ configs:
         - -e
         - "fail in config for you\n"
         script: ""
-
-# maybe separate actions in success actions and failure actions
-# necesito:
-# - nombre del repo
-# - token de acceso
-# - owner del repo (a lo mejor)
-# - path de la config en el repo
-# - nombre de la configuración específica
