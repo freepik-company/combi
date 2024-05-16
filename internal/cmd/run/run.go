@@ -9,6 +9,7 @@ import (
 	"gcmerge/internal/conditions"
 	"gcmerge/internal/config"
 	"gcmerge/internal/encoding/libconfig"
+	"gcmerge/internal/git"
 	"gcmerge/internal/globals"
 
 	"github.com/spf13/cobra"
@@ -101,8 +102,18 @@ func RunCommand(cmd *cobra.Command, args []string) {
 	// EXECUTION FLOW RELATED
 	/////////////////////////////
 
-	//TODO: Set git repository client to get the gcmerge config file
-	// client := git.NewGitHubClient()
+	gcmTmpPath := "/tmp/gcmerge"
+	if err = os.MkdirAll(gcmTmpPath, 0744); err != nil {
+		globals.ExecContext.Logger.Fatalf("unable to create '%s' dir: %s", gcmTmpPath, err)
+	}
+
+	source := git.Git{
+		SshKeyFilepath:     "/home/svargas/.ssh/id_rsa_github",
+		RepoSshUrl:         "git@github.com:sebastocorp/gcmerge.git",
+		RepoBranch:         "main",
+		RepoPath:           "/tmp/gcmerge/repo",
+		RepoConfigFilepath: "config/gcmerge.yaml",
+	}
 
 	firstLoop := true
 	for {
@@ -113,12 +124,14 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		}
 		firstLoop = false
 
-		// TODO: Get gcmerge config file from git repository (store in local /tmp/gcmerge/gitcongig.yaml)
-		// TODO: Compare current gcmerge config (/var/lib/gcmerge/gitconfig.yaml) file with download one to decide make the changes (make it if first time)
-
-		gcmFullConfigBytes, err := os.ReadFile("./config/gcmerge.yaml")
+		gcmFullConfigBytes, err := source.GetConfig()
 		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to get gcmerge config file: %s", err.Error())
+			globals.ExecContext.Logger.Errorf("unable to get gcmerge configuration: %s", err.Error())
+			continue
+		}
+
+		if !source.NeedUpdate() {
+			continue
 		}
 
 		// Parse gcmerge config
