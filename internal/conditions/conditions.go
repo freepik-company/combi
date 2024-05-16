@@ -2,7 +2,8 @@ package conditions
 
 import (
 	"fmt"
-	"gcmerge/internal/config"
+
+	"gcmerge/api/v1alpha1"
 	"gcmerge/internal/globals"
 	"gcmerge/internal/template"
 )
@@ -12,7 +13,7 @@ const (
 	optionalConditionErrorMessage  = "optional condition '%s' fail with value { %s } and result { %s }"
 )
 
-func RunConditions(conditions *config.ConditionsT, config map[string]interface{}) (err error) {
+func RunConditions(conditions *v1alpha1.ConditionsT, config map[string]interface{}) (err error) {
 	for _, condition := range conditions.Mandatory {
 		result, err := template.EvaluateTemplate(condition.Template, config)
 		if err != nil {
