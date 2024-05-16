@@ -6,14 +6,12 @@ global:
     [
       "item1", "item2", "item3",
     ]
-  conditions: []
+  conditions:
+    mandatory: []
+    optional: []
   actions:
-  - name: "execute success message global action"
-    command:
-    - echo
-    - -e
-    - "success in global for you\n"
-    script: ""
+    onSuccess: []
+    onFailure: []
 configs:
   example1:
     targetConfig: ./config/samples/libconfig.cnf
@@ -28,38 +26,48 @@ configs:
       }
 
     conditions:
-    - name: "print root primitive values condition"
-      template: |
-        {{- $config := .example1 -}}
-        {{- range $i, $s := $config -}}
-          {{- if (index $config $i).SettingValue.Primitive -}}
-            {{- printf "%v" (index $config $i).SetingName -}}=
-            {{- printf "%v\n" (index $config $i).SettingValue.Primitive.Value -}}
+      mandatory:
+      - name: "search primitive value to check condition"
+        template: |
+          {{- $config := .example1 -}}
+          {{- range $i, $s := $config -}}
+            {{- if (eq (index $config $i).SetingName "int64field") -}}
+              {{- printf "%s" (index $config $i).SettingValue.Primitive.Value -}}
+            {{- end -}}
           {{- end -}}
-        {{- end -}}
-        {{- printf "----------------------------------------------------------------\n" -}}
-      value: ""
-    - name: "search primitive value to check condition"
-      template: |
-        {{- $config := .example1 -}}
-        {{- range $i, $s := $config -}}
-          {{- if (eq (index $config $i).SetingName "int64field") -}}
-            {{- printf "%s" (index $config $i).SettingValue.Primitive.Value -}}
+        value: "500L"
+      - name: "search env variable to check condition"
+        template: |
+          {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
+        value: "true"
+      optional:
+      - name: "print root primitive values condition"
+        template: |
+          {{- $config := .example1 -}}
+          {{- range $i, $s := $config -}}
+            {{- if (index $config $i).SettingValue.Primitive -}}
+              {{- printf "%v" (index $config $i).SetingName -}}=
+              {{- printf "%v\n" (index $config $i).SettingValue.Primitive.Value -}}
+            {{- end -}}
           {{- end -}}
-        {{- end -}}
-      value: "500L"
-    - name: "search env variable to check condition"
-      template: |
-        {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
-      value: "true"
+          {{- printf "----------------------------------------------------------------\n" -}}
+        value: ""
 
     actions:
-    - name: "execute success message config action"
-      command:
-      - echo
-      - -e
-      - "success in config for you\n"
-      script: ""
+      onSuccess:
+      - name: "execute success message config action"
+        command:
+        - echo
+        - -e
+        - "success in config for you\n"
+        script: ""
+      onFailure:
+      - name: "execute success message config action"
+        command:
+        - echo
+        - -e
+        - "success in config for you\n"
+        script: ""
 
 # maybe separate actions in success actions and failure actions
 # necesito:

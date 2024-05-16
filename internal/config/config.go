@@ -9,17 +9,27 @@ type GCMerge struct {
 }
 
 type GlobalT struct {
-	RawConfig  string       `yaml:"rawConfig"`
-	Conditions []ConditionT `yaml:"conditions"`
-	Actions    []ActionT    `yaml:"actions"`
+	RawConfig  string      `yaml:"rawConfig"`
+	Conditions ConditionsT `yaml:"conditions"`
+	Actions    ActionsT    `yaml:"actions"`
 }
 
 type ConfigT struct {
-	TargetConfig string       `yaml:"targetConfig"`
-	MergedConfig string       `yaml:"mergedConfig"`
-	RawConfig    string       `yaml:"rawConfig"`
-	Conditions   []ConditionT `yaml:"conditions"`
-	Actions      []ActionT    `yaml:"actions"`
+	TargetConfig string      `yaml:"targetConfig"`
+	MergedConfig string      `yaml:"mergedConfig"`
+	RawConfig    string      `yaml:"rawConfig"`
+	Conditions   ConditionsT `yaml:"conditions"`
+	Actions      ActionsT    `yaml:"actions"`
+}
+
+type ConditionsT struct {
+	Mandatory []ConditionT `yaml:"mandatory"`
+	Optional  []ConditionT `yaml:"optional"`
+}
+
+type ActionsT struct {
+	OnSuccess []ActionT `yaml:"onSuccess"`
+	OnFailure []ActionT `yaml:"onFailure"`
 }
 
 type ConditionT struct {

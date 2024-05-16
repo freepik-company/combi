@@ -1,16 +1,15 @@
 package run
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"time"
 
+	"gcmerge/internal/actions"
+	"gcmerge/internal/conditions"
 	"gcmerge/internal/config"
 	"gcmerge/internal/encoding/libconfig"
 	"gcmerge/internal/globals"
-	"gcmerge/internal/template"
 
 	"github.com/spf13/cobra"
 )
@@ -163,34 +162,18 @@ func RunCommand(cmd *cobra.Command, args []string) {
 				}
 				libconfig.MergeConfigs(targetConfig, globalRawConfig)
 
-				// TODO: Check config conditions
-				for _, condition := range gcmLocalConfig.Conditions {
-					result, err := template.EvaluateTemplate(
-						condition.Template,
-						map[string]interface{}{
-							configNameField: targetConfig.Settings,
-						},
-					)
-					if err != nil {
-						globals.ExecContext.Logger.Errorf("unable to evaluate template in '%s' local config condition: %s", condition.Name, err.Error())
-						continue
-					}
-					fmt.Println(result)
+				// Check config conditions
+				targetConfigMap := libconfig.ConfigToMap(targetConfig)
+				err = conditions.RunConditions(&gcmLocalConfig.Conditions, targetConfigMap)
+				if err != nil {
+					globals.ExecContext.Logger.Errorf("unable to evaluate local conditions: %s", err.Error())
+					continue
 				}
 
-				// TODO: Check global config conditions
-				for _, condition := range gcmGlobalConfig.Conditions {
-					result, err := template.EvaluateTemplate(
-						condition.Template,
-						map[string]interface{}{
-							configNameField: targetConfig.Settings,
-						},
-					)
-					if err != nil {
-						globals.ExecContext.Logger.Errorf("unable to evaluate template in '%s' global config condition: %s", condition.Name, err.Error())
-						continue
-					}
-					fmt.Println(result)
+				err = conditions.RunConditions(&gcmGlobalConfig.Conditions, targetConfigMap)
+				if err != nil {
+					globals.ExecContext.Logger.Errorf("unable to evaluate global conditions: %s", err.Error())
+					continue
 				}
 
 				mergedConfigStr = libconfig.EncodeConfigString(targetConfig)
@@ -210,22 +193,23 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		}
 
 		// Execute config actions
-		for _, action := range gcmLocalConfig.Actions {
-			command := exec.Command(action.Command[0], action.Command[1:]...)
-			command.Stdout = os.Stdout
-			command.Stderr = os.Stderr
-			if err = command.Run(); err != nil {
-				globals.ExecContext.Logger.Errorf("unable to execute '%s' local config action: %s", action.Name, err.Error())
-			}
+		err = actions.RunActions(&gcmLocalConfig.Actions.OnSuccess)
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to execute local success actions: %s", err.Error())
 		}
+		err = actions.RunActions(&gcmLocalConfig.Actions.OnFailure)
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to execute local failure actions: %s", err.Error())
+		}
+
 		// Execute global actions
-		for _, action := range gcmGlobalConfig.Actions {
-			command := exec.Command(action.Command[0], action.Command[1:]...)
-			command.Stdout = os.Stdout
-			command.Stderr = os.Stderr
-			if err = command.Run(); err != nil {
-				globals.ExecContext.Logger.Errorf("unable to execute '%s' global config action: %s", action.Name, err.Error())
-			}
+		err = actions.RunActions(&gcmGlobalConfig.Actions.OnSuccess)
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to execute global success actions: %s", err.Error())
+		}
+		err = actions.RunActions(&gcmGlobalConfig.Actions.OnFailure)
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to execute global failure actions: %s", err.Error())
 		}
 	}
 }
