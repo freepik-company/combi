@@ -27,17 +27,17 @@ func configSettingsToMap(settings *[]*SettingT, configMap *map[string]interface{
 		}
 
 		if setting.SettingValue.List != nil {
-			var tmpValue interface{}
-			configListToMap(&setting.SettingValue.List.SettingValues, &tmpValue)
-			(*configMap)[setting.SetingName] = tmpValue
+			var tmpValues []interface{}
+			configListToMap(&setting.SettingValue.List.SettingValues, &tmpValues)
+			(*configMap)[setting.SetingName] = tmpValues
 		}
 	}
 }
 
-func configListToMap(settingValues *[]*SettingValueT, value *interface{}) {
+func configListToMap(settingValues *[]*SettingValueT, values *[]interface{}) {
 	for _, sv := range *settingValues {
 		if sv.Primitive != nil {
-			*value = sv.Primitive.Value
+			*values = append(*values, sv.Primitive.Value)
 		}
 
 		if sv.Array != nil {
@@ -45,19 +45,19 @@ func configListToMap(settingValues *[]*SettingValueT, value *interface{}) {
 			for _, item := range sv.Array.Primitives {
 				tmpArray = append(tmpArray, item.Value)
 			}
-			*value = tmpArray
+			*values = append(*values, tmpArray)
 		}
 
 		if sv.Group != nil {
 			tmpConfigMap := map[string]interface{}{}
 			configSettingsToMap(&sv.Group.Settings, &tmpConfigMap)
-			*value = tmpConfigMap
+			*values = append(*values, tmpConfigMap)
 		}
 
 		if sv.List != nil {
-			var tmpValue interface{}
-			configListToMap(&sv.List.SettingValues, &tmpValue)
-			*value = tmpValue
+			var tmpValues []interface{}
+			configListToMap(&sv.List.SettingValues, &tmpValues)
+			*values = append(*values, tmpValues)
 		}
 	}
 }
