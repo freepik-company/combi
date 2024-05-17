@@ -13,7 +13,7 @@ type LocalT struct {
 }
 
 func (s *LocalT) Init(f flags.DaemonFlagsT) {
-
+	s.ConfigFilepath = f.SourcePath
 }
 
 func (s *LocalT) GetConfig() (config []byte, err error) {
