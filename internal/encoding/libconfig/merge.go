@@ -3,9 +3,12 @@ package libconfig
 // ----------------------------------------------------------------
 // Merge LIBCONFIG data structure
 // ----------------------------------------------------------------
+func (e *LibconfigT) GetConfigStruct() (config interface{}) {
+	return e.ConfigStruct
+}
 
-func MergeConfigs(destination *LIBCONFIG, source *LIBCONFIG) {
-	mergeSettings(&destination.Settings, &source.Settings)
+func (e *LibconfigT) MergeConfigs(source interface{}) {
+	mergeSettings(&e.ConfigStruct.Settings, &(source.(*LIBCONFIG)).Settings)
 }
 
 func mergeSettings(destination *[]*SettingT, source *[]*SettingT) {

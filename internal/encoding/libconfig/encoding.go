@@ -22,6 +22,10 @@ const (
 		settingValuePrimitiveIntRegex + `)`
 )
 
+type LibconfigT struct {
+	ConfigStruct *LIBCONFIG
+}
+
 // ----------------------------------------------------------------
 // LIBCONFIG data structure
 // ----------------------------------------------------------------
@@ -64,17 +68,17 @@ type ListT struct {
 
 // Decode functions
 
-func DecodeConfig(filepath string) (libconfig *LIBCONFIG, err error) {
+func (e *LibconfigT) DecodeConfig(filepath string) (err error) {
 	configBytes, err := os.ReadFile(filepath)
 	if err != nil {
-		return libconfig, err
+		return err
 	}
 
-	libconfig, err = DecodeConfigBytes(configBytes)
-	return libconfig, err
+	err = e.DecodeConfigBytes(configBytes)
+	return err
 }
 
-func DecodeConfigBytes(configBytes []byte) (libconfig *LIBCONFIG, err error) {
+func (e *LibconfigT) DecodeConfigBytes(configBytes []byte) (err error) {
 	configLexer := lexer.MustSimple([]lexer.SimpleRule{
 		{Name: `Name`, Pattern: settingNameRegex},
 		{Name: `Value`, Pattern: settingValuePrimitiveRegex},
@@ -86,14 +90,14 @@ func DecodeConfigBytes(configBytes []byte) (libconfig *LIBCONFIG, err error) {
 		participle.Lexer(configLexer),
 	)
 
-	libconfig, err = configParser.ParseBytes("", configBytes)
-	return libconfig, err
+	e.ConfigStruct, err = configParser.ParseBytes("", configBytes)
+	return err
 }
 
 // Encode functions
 
-func EncodeConfigString(config *LIBCONFIG) (configStr string) {
-	configStr += encodeConfigSettingString(config.Settings, 0)
+func (e *LibconfigT) EncodeConfigString() (configStr string) {
+	configStr += encodeConfigSettingString(e.ConfigStruct.Settings, 0)
 	return configStr
 }
 

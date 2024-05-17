@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"gcmerge/internal/actions"
-	"gcmerge/internal/conditions"
 	"gcmerge/internal/config"
-	"gcmerge/internal/encoding/libconfig"
+	"gcmerge/internal/encoding"
 	"gcmerge/internal/flags"
 	"gcmerge/internal/globals"
 	"gcmerge/internal/source"
@@ -39,9 +38,9 @@ func NewCommand() *cobra.Command {
 
 	cmd.Flags().String(flags.TmpDirFlagName, "/tmp/combi", "Verbosity level for logs")
 	cmd.Flags().String(flags.SyncTimeFlagName, "15s", "Waiting time between group synchronizations (in duration type)")
-	cmd.Flags().String(flags.SourceTypeFlagName, "git", "Source where find cmerged configuration")
-	cmd.Flags().String(flags.SourcePathFlagName, "config/gcmerge.yaml", "Source path where find cmerged configuration")
-	cmd.Flags().String(flags.SourceFieldFlagName, "example1", "Field in cmerged configuration map to find mergeble config")
+	cmd.Flags().String(flags.SourceTypeFlagName, "git", "Source where find source config")
+	cmd.Flags().String(flags.SourcePathFlagName, "config/gcmerge.yaml", "Source path where find source config")
+	cmd.Flags().String(flags.SourceFieldFlagName, "example1", "Field in source config map to find mergeble config")
 
 	//
 	cmd.Flags().String(flags.GitSshUrlFlagName, "git@github.com:sebastocorp/gcmerge.git", "Git repository ssh url")
@@ -89,9 +88,9 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		}
 		firstLoop = false
 
-		gcmFullConfigBytes, err := src.GetConfig()
+		combiFullConfigBytes, err := src.GetConfig()
 		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to get git gcmerge configuration: %s", err.Error())
+			globals.ExecContext.Logger.Errorf("unable to get source config: %s", err.Error())
 			continue
 		}
 
@@ -99,96 +98,69 @@ func RunCommand(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		// Parse gcmerge config
-		gcmFullConfig, err := config.Parse(gcmFullConfigBytes)
+		// Parse config
+		combiFullConfig, err := config.Parse(combiFullConfigBytes)
 		if err != nil {
-			globals.ExecContext.Logger.Errorf("unable to parse gcmerge config file: %s", err.Error())
+			globals.ExecContext.Logger.Errorf("unable to parse source config: %s", err.Error())
 			continue
 		}
 
-		gcmGlobalConfig := gcmFullConfig.Global
-		gcmLocalConfig, ok := gcmFullConfig.Configs[cmdFlags.SourceField]
+		combiLocalConfig, ok := combiFullConfig.Configs[cmdFlags.SourceField]
 		if !ok {
-			globals.ExecContext.Logger.Errorf("unable to get '%s' local configuration in gcmerge config file: %s", cmdFlags.SourceField)
+			globals.ExecContext.Logger.Errorf("unable to get '%s' local config in source config file: %s", cmdFlags.SourceField)
 			continue
 		}
 
 		// Expand env variables in local and global rawConfig
-		gcmGlobalConfig.RawConfig = os.ExpandEnv(gcmGlobalConfig.RawConfig)
-		gcmLocalConfig.RawConfig = os.ExpandEnv(gcmLocalConfig.RawConfig)
+		combiFullConfig.Global.RawConfig = os.ExpandEnv(combiFullConfig.Global.RawConfig)
+		combiLocalConfig.RawConfig = os.ExpandEnv(combiLocalConfig.RawConfig)
 
-		var mergedConfigStr string
-		var evalLocalConditionsSuccess bool
-		var evalGlobalConditionsSuccess bool
-		switch gcmFullConfig.Kind {
-		case "libconfig":
-			{
-				targetConfig, err := libconfig.DecodeConfig(gcmLocalConfig.TargetConfig)
-				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to decode '%s' target config file: %s", gcmLocalConfig.TargetConfig, err.Error())
-					continue
-				}
-				localRawConfig, err := libconfig.DecodeConfigBytes([]byte(gcmLocalConfig.RawConfig))
-				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to decode '%s' local raw config field: %s", cmdFlags.SourceField, err.Error())
-					continue
-				}
-				libconfig.MergeConfigs(targetConfig, localRawConfig)
-
-				globalRawConfig, err := libconfig.DecodeConfigBytes([]byte(gcmGlobalConfig.RawConfig))
-				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to decode global raw config field: %s", err.Error())
-					continue
-				}
-				libconfig.MergeConfigs(targetConfig, globalRawConfig)
-
-				// Check local config conditions
-				targetConfigMap := libconfig.ConfigToMap(targetConfig)
-				evalLocalConditionsSuccess, err = conditions.EvalConditions(&gcmLocalConfig.Conditions, &targetConfigMap)
-				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to evaluate local conditions: %s", err.Error())
-				}
-
-				// Check global config conditions
-				evalGlobalConditionsSuccess, err = conditions.EvalConditions(&gcmGlobalConfig.Conditions, &targetConfigMap)
-				if err != nil {
-					globals.ExecContext.Logger.Errorf("unable to evaluate global conditions: %s", err.Error())
-				}
-
-				mergedConfigStr = libconfig.EncodeConfigString(targetConfig)
-			}
-		default:
-			{
-				globals.ExecContext.Logger.Errorf("unsuported configuration type: %s", gcmFullConfig.Kind)
-				continue
-			}
+		_, ok = encoding.GetEncoders()[combiFullConfig.Kind]
+		if !ok {
+			globals.ExecContext.Logger.Errorf("unsuported config type: %s", combiFullConfig.Kind)
+			continue
 		}
 
+		targetEncoder, err := mergeConfigurations(combiFullConfig, cmdFlags.SourceField) // TODO: fix this function
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to merge configs: %s", err.Error())
+			continue
+		}
+
+		targetConfigMap := targetEncoder.ConfigToMap()
+		result, err := evaluateConditions(combiFullConfig, cmdFlags.SourceField, targetConfigMap)
+		if err != nil {
+			globals.ExecContext.Logger.Errorf("unable to evaluate conditions: %s", err.Error())
+			continue
+		}
+
+		mergedConfigStr := targetEncoder.EncodeConfigString()
+
 		// Execute local+global actions
-		if evalLocalConditionsSuccess && evalGlobalConditionsSuccess {
+		if result {
 			// Update targetConfig with merged config file
-			err = os.WriteFile(gcmLocalConfig.MergedConfig, []byte(mergedConfigStr), 0644)
+			err = os.WriteFile(combiLocalConfig.MergedConfig, []byte(mergedConfigStr), 0644)
 			if err != nil {
-				globals.ExecContext.Logger.Errorf("unable to create '%s' merged config file: %s", gcmLocalConfig.MergedConfig, err.Error())
+				globals.ExecContext.Logger.Errorf("unable to create '%s' merged config file: %s", combiLocalConfig.MergedConfig, err.Error())
 				continue
 			}
 
-			err = actions.RunActions(&gcmLocalConfig.Actions.OnSuccess)
+			err = actions.RunActions(&combiLocalConfig.Actions.OnSuccess)
 			if err != nil {
 				globals.ExecContext.Logger.Errorf("unable to execute local success actions: %s", err.Error())
 			}
 
-			err = actions.RunActions(&gcmGlobalConfig.Actions.OnSuccess)
+			err = actions.RunActions(&combiFullConfig.Global.Actions.OnSuccess)
 			if err != nil {
 				globals.ExecContext.Logger.Errorf("unable to execute global success actions: %s", err.Error())
 			}
 		} else {
-			err = actions.RunActions(&gcmLocalConfig.Actions.OnFailure)
+			err = actions.RunActions(&combiLocalConfig.Actions.OnFailure)
 			if err != nil {
 				globals.ExecContext.Logger.Errorf("unable to execute local failure actions: %s", err.Error())
 			}
 
-			err = actions.RunActions(&gcmGlobalConfig.Actions.OnFailure)
+			err = actions.RunActions(&combiFullConfig.Global.Actions.OnFailure)
 			if err != nil {
 				globals.ExecContext.Logger.Errorf("unable to execute global failure actions: %s", err.Error())
 			}

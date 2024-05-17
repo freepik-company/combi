@@ -1,8 +1,8 @@
 package libconfig
 
-func ConfigToMap(config *LIBCONFIG) (libconfigMap map[string]interface{}) {
+func (e *LibconfigT) ConfigToMap() (libconfigMap map[string]interface{}) {
 	libconfigMap = make(map[string]interface{})
-	configSettingsToMap(&config.Settings, &libconfigMap)
+	configSettingsToMap(&e.ConfigStruct.Settings, &libconfigMap)
 	return libconfigMap
 }
 
