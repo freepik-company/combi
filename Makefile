@@ -1,25 +1,4 @@
 
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
-
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
-
-# CONTAINER_TOOL defines the container tool to be used for building images.
-# Be aware that the target commands are only tested with Docker which is
-# scaffolded by default. However, you might want to replace it to use other
-# tools. (i.e. podman)
-CONTAINER_TOOL ?= docker
-
-# Setting SHELL to bash allows bash commands to be executed by recipes.
-# Options are set to exit when a recipe line exits non-zero or a piped command fails.
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
-
 .PHONY: all
 all: build
 
@@ -53,9 +32,9 @@ vet: ## Run go vet against code.
 ##@ Build
 
 .PHONY: build
-build: fmt vet ## Build manager binary.
-	go build -o bin/gcmerge cmd/gcmerge/main.go
+build: fmt ## Build manager binary.
+	go build -o bin/combi cmd/combi/main.go
 
 .PHONY: run
-run: fmt vet ## Run a controller from your host.
-	go run ./cmd/gcmerge/main.go
+run: fmt ## Run a controller from your host.
+	go run ./cmd/combi/main.go

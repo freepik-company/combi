@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"gcmerge/internal/cmd/run"
+	"gcmerge/internal/cmd/daemon"
 	"gcmerge/internal/cmd/version"
 
 	"github.com/spf13/cobra"
@@ -14,16 +14,16 @@ const (
 )
 
 func NewRootCommand(name string) *cobra.Command {
-	c := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   name,
 		Short: descriptionShort,
 		Long:  descriptionLong,
 	}
 
-	c.AddCommand(
+	cmd.AddCommand(
 		version.NewCommand(),
-		run.NewCommand(),
+		daemon.NewCommand(),
 	)
 
-	return c
+	return cmd
 }

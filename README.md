@@ -1,3 +1,3 @@
-# Git Config Merge (gcmerge)
+# Config Combinator (combi)
 
-Git Config Merge is a simple client that merge source configuration stored in a git repository with local configuration file.
+Combi is a simple client that merge diferents configurations stored in a source with a local target configuration file to generate a final usable configuration.
