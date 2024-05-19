@@ -39,12 +39,12 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flags.TmpDirFlagName, "/tmp/combi", "Verbosity level for logs")
 	cmd.Flags().String(flags.SyncTimeFlagName, "15s", "Waiting time between group synchronizations (in duration type)")
 	cmd.Flags().String(flags.SourceTypeFlagName, "git", "Source where find source config")
-	cmd.Flags().String(flags.SourcePathFlagName, "config/gcmerge.yaml", "Source path where find source config")
+	cmd.Flags().String(flags.SourcePathFlagName, "config/combi.yaml", "Source path where find source config")
 	cmd.Flags().String(flags.SourceFieldFlagName, "example1", "Field in source config map to find mergeble config")
 
 	//
-	cmd.Flags().String(flags.GitSshUrlFlagName, "git@github.com:sebastocorp/gcmerge.git", "Git repository ssh url")
-	cmd.Flags().String(flags.GitSshKeyFilepathFlagName, "/home/svargas/.ssh/id_rsa_github", "Ssh private key filepath for git repository")
+	cmd.Flags().String(flags.GitSshUrlFlagName, "git@github.com:example/project.git", "Git repository ssh url")
+	cmd.Flags().String(flags.GitSshKeyFilepathFlagName, "/home/example/.ssh/id_rsa_github", "Ssh private key filepath for git repository")
 	cmd.Flags().String(flags.GitBranchFlagName, "main", "Git branch repository")
 
 	return cmd
@@ -139,7 +139,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		// Execute local+global actions
 		if result {
 			// Update targetConfig with merged config file
-			err = os.WriteFile(combiLocalConfig.MergedConfig, []byte(mergedConfigStr), 0644)
+			err = os.WriteFile(combiLocalConfig.MergedConfig, []byte(mergedConfigStr), 0744)
 			if err != nil {
 				globals.ExecContext.Logger.Errorf("unable to create '%s' merged config file: %s", combiLocalConfig.MergedConfig, err.Error())
 				continue
