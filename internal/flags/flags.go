@@ -43,7 +43,7 @@ type DaemonFlagsT struct {
 	GitBranch         string
 }
 
-func GetSyncRunFlags(cmd *cobra.Command) (srFlags DaemonFlagsT, err error) {
+func GetDaemonFlags(cmd *cobra.Command) (srFlags DaemonFlagsT, err error) {
 
 	// Get root command flags
 	srFlags.LogLevel, err = cmd.Flags().GetString(LogLevelFlagName)

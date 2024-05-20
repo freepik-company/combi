@@ -54,7 +54,7 @@ func NewCommand() *cobra.Command {
 // Ref: https://pkg.go.dev/github.com/spf13/pflag#StringSlice
 func RunCommand(cmd *cobra.Command, args []string) {
 
-	cmdFlags, err := flags.GetSyncRunFlags(cmd)
+	cmdFlags, err := flags.GetDaemonFlags(cmd)
 	if err != nil {
 		globals.ExecContext.Logger.Fatalf(getFlagsErrMsg, err.Error())
 	}
@@ -88,6 +88,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 		}
 		firstLoop = false
 
+		globals.ExecContext.Logger.Infof("get configurations from source")
 		combiFullConfigBytes, err := src.GetConfig()
 		if err != nil {
 			globals.ExecContext.Logger.Errorf("unable to get source config: %s", err.Error())
@@ -121,12 +122,14 @@ func RunCommand(cmd *cobra.Command, args []string) {
 			continue
 		}
 
+		globals.ExecContext.Logger.Infof("merge configurations from source to target")
 		targetEncoder, err := mergeConfigurations(combiFullConfig, cmdFlags.SourceField) // TODO: fix this function
 		if err != nil {
 			globals.ExecContext.Logger.Errorf("unable to merge configs: %s", err.Error())
 			continue
 		}
 
+		globals.ExecContext.Logger.Infof("evaluate confitions")
 		targetConfigMap := targetEncoder.ConfigToMap()
 		result, err := evaluateConditions(combiFullConfig, cmdFlags.SourceField, targetConfigMap)
 		if err != nil {
@@ -134,10 +137,10 @@ func RunCommand(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		mergedConfigStr := targetEncoder.EncodeConfigString()
-
 		// Execute local+global actions
 		if result {
+			globals.ExecContext.Logger.Infof("create final merged configuration file")
+			mergedConfigStr := targetEncoder.EncodeConfigString()
 			// Update targetConfig with merged config file
 			err = os.WriteFile(combiLocalConfig.MergedConfig, []byte(mergedConfigStr), 0744)
 			if err != nil {
@@ -145,6 +148,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 				continue
 			}
 
+			globals.ExecContext.Logger.Infof("execute success actions")
 			err = actions.RunActions(&combiLocalConfig.Actions.OnSuccess)
 			if err != nil {
 				globals.ExecContext.Logger.Errorf("unable to execute local success actions: %s", err.Error())
@@ -155,6 +159,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 				globals.ExecContext.Logger.Errorf("unable to execute global success actions: %s", err.Error())
 			}
 		} else {
+			globals.ExecContext.Logger.Infof("execute failure actions")
 			err = actions.RunActions(&combiLocalConfig.Actions.OnFailure)
 			if err != nil {
 				globals.ExecContext.Logger.Errorf("unable to execute local failure actions: %s", err.Error())
