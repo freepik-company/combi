@@ -36,11 +36,11 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flags.LogLevelFlagName, "info", "Verbosity level for logs")
 	cmd.Flags().Bool(flags.DisableTraceFlagName, true, "Disable showing traces in logs")
 
-	cmd.Flags().String(flags.TmpDirFlagName, "/tmp/combi", "Verbosity level for logs")
-	cmd.Flags().String(flags.SyncTimeFlagName, "15s", "Waiting time between group synchronizations (in duration type)")
-	cmd.Flags().String(flags.SourceTypeFlagName, "git", "Source where find source config")
-	cmd.Flags().String(flags.SourcePathFlagName, "config/combi.yaml", "Source path where find source config")
-	cmd.Flags().String(flags.SourceFieldFlagName, "example1", "Field in source config map to find mergeble config")
+	cmd.Flags().String(flags.TmpDirFlagName, "/tmp/combi", "Temporary directoty to store temporary objects like remote repos, scripts, etc")
+	cmd.Flags().String(flags.SyncTimeFlagName, "15s", "Waiting time between source synchronizations (in duration type)")
+	cmd.Flags().String(flags.SourceTypeFlagName, "git", "Source where consume the combi config")
+	cmd.Flags().String(flags.SourcePathFlagName, "config/combi.yaml", "Path in source where find combi config")
+	cmd.Flags().String(flags.SourceFieldFlagName, "example1", "Field in combi config map to find the mergeble config")
 
 	//
 	cmd.Flags().String(flags.GitSshUrlFlagName, "git@github.com:example/project.git", "Git repository ssh url")
