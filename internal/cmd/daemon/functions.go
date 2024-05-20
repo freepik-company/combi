@@ -1,9 +1,9 @@
 package daemon
 
 import (
-	"gcmerge/api/v1alpha1"
-	"gcmerge/internal/conditions"
-	"gcmerge/internal/encoding"
+	"combi/api/v1alpha1"
+	"combi/internal/conditions"
+	"combi/internal/encoding"
 )
 
 func mergeConfigurations(combiConfig v1alpha1.GCMerge, configField string) (targetEncoder encoding.EncoderT, err error) {

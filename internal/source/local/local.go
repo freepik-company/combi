@@ -1,7 +1,7 @@
 package local
 
 import (
-	"gcmerge/internal/flags"
+	"combi/internal/flags"
 	"os"
 	"reflect"
 )

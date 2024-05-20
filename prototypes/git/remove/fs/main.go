@@ -48,7 +48,7 @@ func main() {
 	storedHash := ""
 	currentHash := ""
 	repoPath := "/tmp/repo"
-	repoFilePath := "config/gcmerge.yaml"
+	repoFilePath := "config/combi.yaml"
 
 	for {
 		repo, err := git.PlainClone(repoPath, false,

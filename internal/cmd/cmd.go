@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"gcmerge/internal/cmd/daemon"
-	"gcmerge/internal/cmd/version"
+	"combi/internal/cmd/daemon"
+	"combi/internal/cmd/version"
 
 	"github.com/spf13/cobra"
 )

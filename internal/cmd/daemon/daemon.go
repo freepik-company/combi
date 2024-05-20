@@ -4,12 +4,12 @@ import (
 	"os"
 	"time"
 
-	"gcmerge/internal/actions"
-	"gcmerge/internal/config"
-	"gcmerge/internal/encoding"
-	"gcmerge/internal/flags"
-	"gcmerge/internal/globals"
-	"gcmerge/internal/source"
+	"combi/internal/actions"
+	"combi/internal/config"
+	"combi/internal/encoding"
+	"combi/internal/flags"
+	"combi/internal/globals"
+	"combi/internal/source"
 
 	"github.com/spf13/cobra"
 )

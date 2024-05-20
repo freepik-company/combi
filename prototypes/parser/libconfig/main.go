@@ -29,35 +29,35 @@ const (
 // ----------------------------------------------------------------
 
 type LIBCONFIG struct {
-	Settings []*SettingT `@@*`
+	Settings []*SettingT `parser:"@@*"`
 }
 
 type SettingT struct {
-	SetingName   string         `@Name ("="|":")`
-	SettingValue *SettingValueT `@@`
+	SetingName   string         `parser:"@Name ('='|':')"`
+	SettingValue *SettingValueT `parser:"@@"`
 }
 
 type SettingValueT struct {
-	Primitive *PrimitiveT `( @@ (";"?","?)`
-	Group     *GroupT     ` | @@ (","?)`
-	Array     *ArrayT     ` | @@ (","?)`
-	List      *ListT      ` | @@ (","?))`
+	Primitive *PrimitiveT `parser:"( @@ (';'?','?)"`
+	Group     *GroupT     `parser:" | @@ (','?)"`
+	Array     *ArrayT     `parser:" | @@ (','?)"`
+	List      *ListT      `parser:" | @@ (','?))"`
 }
 
 type PrimitiveT struct {
-	Value string `@Value`
+	Value string `parser:"@Value"`
 }
 
 type GroupT struct {
-	Settings []*SettingT `"{" @@* "}"`
+	Settings []*SettingT `parser:"'{' @@* '}'"`
 }
 
 type ArrayT struct {
-	Primitives []*PrimitiveT `"[" @@* "]"`
+	Primitives []*PrimitiveT `parser:"'[' @@* ']'"`
 }
 
 type ListT struct {
-	List []*SettingValueT `"(" @@* ")"`
+	List []*SettingValueT `parser:"'(' @@* ')'"`
 }
 
 func main() {

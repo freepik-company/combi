@@ -8,7 +8,7 @@ const (
 	descriptionShort = `Help about any command`
 	descriptionLong  = `
 	Help provides help for any command in the application.
-	Simply type gcmerge help [path to command] for full details.`
+	Simply type combi help [path to command] for full details.`
 )
 
 func NewCommand() *cobra.Command {

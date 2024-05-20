@@ -1,4 +1,4 @@
-module gcmerge
+module combi
 
 go 1.22.3
 

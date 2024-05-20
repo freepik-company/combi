@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/exec"
 
-	"gcmerge/api/v1alpha1"
+	"combi/api/v1alpha1"
 )
 
 func RunActions(actions *[]v1alpha1.ActionT) (err error) {

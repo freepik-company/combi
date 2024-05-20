@@ -1,6 +1,6 @@
 package encoding
 
-import "gcmerge/internal/encoding/libconfig"
+import "combi/internal/encoding/libconfig"
 
 const (
 	libconfigEncoderKey = `libconfig`

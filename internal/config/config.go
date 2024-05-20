@@ -1,7 +1,7 @@
 package config
 
 import (
-	"gcmerge/api/v1alpha1"
+	"combi/api/v1alpha1"
 
 	"gopkg.in/yaml.v3"
 )

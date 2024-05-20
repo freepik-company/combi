@@ -3,9 +3,9 @@ package conditions
 import (
 	"fmt"
 
-	"gcmerge/api/v1alpha1"
-	"gcmerge/internal/globals"
-	"gcmerge/internal/template"
+	"combi/api/v1alpha1"
+	"combi/internal/globals"
+	"combi/internal/template"
 )
 
 const (

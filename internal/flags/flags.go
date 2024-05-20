@@ -1,8 +1,9 @@
 package flags
 
 import (
-	"gcmerge/internal/globals"
 	"log"
+
+	"combi/internal/globals"
 
 	"github.com/spf13/cobra"
 )

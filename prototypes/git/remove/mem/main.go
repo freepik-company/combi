@@ -49,7 +49,7 @@ func main() {
 
 	storedHash := ""
 	currentHash := ""
-	repoFilePath := "config/gcmerge.yaml"
+	repoFilePath := "config/combi.yaml"
 
 	for {
 		storer := memory.NewStorage()

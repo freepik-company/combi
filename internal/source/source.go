@@ -1,9 +1,9 @@
 package source
 
 import (
-	"gcmerge/internal/flags"
-	"gcmerge/internal/source/git"
-	"gcmerge/internal/source/local"
+	"combi/internal/flags"
+	"combi/internal/source/git"
+	"combi/internal/source/local"
 )
 
 type SourceT interface {

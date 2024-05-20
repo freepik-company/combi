@@ -1,4 +1,4 @@
-# gcmerge configuration file
+# combi configuration file
 kind: libconfig
 global:
   rawConfig: |

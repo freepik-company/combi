@@ -32,7 +32,7 @@ vet: ## Run go vet against code.
 ##@ Build
 
 .PHONY: build
-build: fmt ## Build manager binary.
+build: fmt vet ## Build manager binary.
 	go build -o bin/combi cmd/combi/main.go
 
 .PHONY: run

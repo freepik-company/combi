@@ -1,9 +1,10 @@
 package git
 
 import (
-	"gcmerge/internal/flags"
 	"os"
 	"reflect"
+
+	"combi/internal/flags"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
