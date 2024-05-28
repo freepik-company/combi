@@ -5,6 +5,7 @@ go 1.22.3
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/alecthomas/kong v0.9.0
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/repr v0.4.0
 	github.com/go-git/go-billy/v5 v5.5.0
