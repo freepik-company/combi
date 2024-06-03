@@ -35,6 +35,13 @@ vet: ## Run go vet against code.
 build: fmt vet ## Build manager binary.
 	go build -o bin/combi cmd/combi/main.go
 
+RUN_SUBCOMMAND?=daemon
+
+RUN_SYNC_FLAGS?=--sync-time=5s
+RUN_SRC_FLAGS?=--source-path=config/samples/libconfig.yaml --source-type=git --source-field=example1
+RUN_GIT_FLAGS?=--git-ssh-url=git@github.com:sebastocorp/combi.git --git-branch=main
+RUN_FLAGS?=$(RUN_SYNC_FLAGS) $(RUN_SRC_FLAGS) $(RUN_GIT_FLAGS)
+
 .PHONY: run
-run: fmt ## Run a controller from your host.
-	go run ./cmd/combi/main.go
+run: fmt vet ## Run a command from your host (need to be defined envs: RUNSUBCOMMAND and RUNFLAGS).
+	go run cmd/combi/main.go $(RUN_SUBCOMMAND) $(RUN_FLAGS)
