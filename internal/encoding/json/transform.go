@@ -1,6 +1,6 @@
 package json
 
-func (e *JsonT) ConfigToMap() (jsonMap map[string]interface{}) {
-	jsonMap = e.ConfigStruct.(map[string]interface{})
-	return jsonMap
+func (e *JsonT) ConfigToMap() (configMap map[string]interface{}) {
+	configMap = e.ConfigStruct.(map[string]interface{})
+	return configMap
 }

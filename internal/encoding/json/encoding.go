@@ -33,7 +33,7 @@ func (e *JsonT) DecodeConfigBytes(configBytes []byte) (err error) {
 // Encode functions
 
 func (e *JsonT) EncodeConfigString() (configStr string) {
-	configBytes, _ := json.Marshal(e.ConfigStruct)
+	configBytes, _ := json.MarshalIndent(e.ConfigStruct, "", "  ")
 	configStr = string(configBytes)
 	return configStr
 }

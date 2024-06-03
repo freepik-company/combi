@@ -21,7 +21,7 @@ type EncoderT interface {
 	GetConfigStruct() (config interface{})
 
 	// Transform configurations
-	ConfigToMap() (decodedStructMap map[string]interface{})
+	ConfigToMap() (configMap map[string]interface{})
 }
 
 func GetEncoders() (encoders map[string]EncoderT) {
