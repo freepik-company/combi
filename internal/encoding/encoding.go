@@ -1,9 +1,13 @@
 package encoding
 
-import "combi/internal/encoding/libconfig"
+import (
+	"combi/internal/encoding/json"
+	"combi/internal/encoding/libconfig"
+)
 
 const (
 	libconfigEncoderKey = `libconfig`
+	jsonEncoderKey      = `json`
 )
 
 type EncoderT interface {
@@ -23,6 +27,7 @@ type EncoderT interface {
 func GetEncoders() (encoders map[string]EncoderT) {
 	encoders = map[string]EncoderT{
 		libconfigEncoderKey: &libconfig.LibconfigT{},
+		jsonEncoderKey:      &json.JsonT{},
 	}
 	return encoders
 }
