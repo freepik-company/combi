@@ -1,11 +1,7 @@
 # combi configuration file
-kind: libconfig
+kind: "" # libconfig|json
 global:
-  rawConfig: |
-    array_test=
-    [
-      "item1", "item2", "item3",
-    ]
+  rawConfig: ""
   conditions:
     mandatory: []
     optional: []
@@ -14,63 +10,26 @@ global:
     onFailure: []
 configs:
   example1:
-    targetConfig: ./config/samples/libconfig.cnf
-    mergedConfig: ./config/samples/merged.cnf
-    rawConfig: |
-      datadir="/var/lib/proxysql"
-
-      admin_variables=
-      {
-        admin_credentials="admin:admin;radmin:radmin"
-        mysql_ifaces="0.0.0.0:6032"
-      }
+    targetConfig: "" # path to the target file to merge the raw config
+    mergedConfig: "" # path to the result file with the merged config
+    rawConfig: "" # raw config to merge in target file
 
     conditions:
-      mandatory:
-      - name: "search primitive value to check condition"
-        template: |
-          {{- $config := . -}}
-          {{- printf "%s" $config.int64field -}}
-        value: "500L"
-      - name: "search group value to check condition"
-        template: |
-          {{- $config := . -}}
-          {{- printf "%s" $config.mysql_variables.threads -}}
-        value: "2"
-      - name: "search list value to check condition"
-        template: |
-          {{- $config := . -}}
-            {{- range $i, $v := $config.mysql_servers -}}
-                {{- if (eq $v.hostgroup "0" ) -}}
-                  {{- printf "%s" $v.max_connections -}}
-                {{- end -}}
-            {{- end -}}
-        value: "1000"
-      - name: "search env variable to check condition"
-        template: |
-          {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
-        value: "true"
-      optional:
-      - name: "print array values condition"
-        template: |
-          {{- $config := . -}}
-          {{- range $k, $v := $config.array_test -}}
-            [{{- printf "%v" $k -}}] => {{- printf "%v, " $v -}}
-          {{- end -}}
-        value: ""
+      mandatory: []
+      # - name: ""
+      #   template: ""
+      #   value: ""
+      optional: []
+      # - name: ""
+      #   template: ""
+      #   value: ""
 
     actions:
-      onSuccess:
-      - name: "execute success message config action"
-        command:
-        - echo
-        - -e
-        - "success in config for you\n"
-        script: ""
-      onFailure:
-      - name: "execute success message config action"
-        command:
-        - echo
-        - -e
-        - "fail in config for you\n"
-        script: ""
+      onSuccess: []
+      # - name: ""
+      #   command: []
+      #   script: ""
+      onFailure: []
+      # - name: ""
+      #   command: []
+      #   script: ""
