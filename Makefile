@@ -35,6 +35,19 @@ vet: ## Run go vet against code.
 build: fmt vet ## Build manager binary.
 	go build -o bin/combi cmd/combi/main.go
 
-.PHONY: run
-run: fmt ## Run a controller from your host.
-	go run ./cmd/combi/main.go
+# Sync time flags
+DAEMON_SYNC_TIME?=5s
+DAEMON_SYNC_FLAGS?=--sync-time=$(DAEMON_SYNC_TIME)
+# Source config flags
+DAEMON_SRC_TYPE?=local
+DAEMON_SRC_PATH?=config/samples/libconfig.yaml
+DAEMON_SRC_FIELD?=example1
+DAEMON_SRC_FLAGS?=--source-type=$(DAEMON_SRC_TYPE) --source-path=$(DAEMON_SRC_PATH) --source-field=$(DAEMON_SRC_FIELD)
+# Extra config flags
+DAEMON_EXTRA_FLAGS?=
+# Daemon subcommand flags
+DAEMON_FLAGS?=$(DAEMON_SYNC_FLAGS) $(DAEMON_SRC_FLAGS) $(DAEMON_EXTRA_FLAGS)
+
+.PHONY: run-daemon
+run-daemon: fmt vet ## Run a command from your host (define DAEMON_FLAGS to custom run daemon).
+	go run cmd/combi/main.go daemon $(DAEMON_FLAGS)
