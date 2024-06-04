@@ -5,193 +5,159 @@ import (
 	"os"
 	"path/filepath"
 	"prototypes/globals"
+	"regexp"
+	"strings"
 
-	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/alecthomas/repr"
+
+	"github.com/tufanbarisyildirim/gonginx/parser"
 )
 
-const (
-	commentsRegex                    = `([#][^\n]*)`
-	escapeCharsRegex                 = `(;|{|}|\s)`
-	settingNameRegex                 = `[A-Za-z*][-A-Za-z0-9_*]*`
-	settingValuePrimitiveStringRegex = `(\"([^\"\\]|\\.)*\")`
-	settingValuePrimitiveFloatRegex  = `(([-+]?([0-9]*)?\.[0-9]*([eE][-+]?[0-9]+)?)|([-+]([0-9]+)(\.[0-9]*)?[eE][-+]?[0-9]+))`
-	settingValuePrimitiveHexRegex    = `(0[Xx][0-9A-Fa-f]+(L{1,2})?)`
-	settingValuePrimitiveIntRegex    = `([-+]?[0-9]+(L{1,2})?)`
-	settingValuePrimitiveRegex       = `(` +
-		settingValuePrimitiveStringRegex + `|` +
-		settingValuePrimitiveFloatRegex + `|` +
-		settingValuePrimitiveHexRegex + `|` +
-		settingValuePrimitiveIntRegex + `)`
-)
-
-// ----------------------------------------------------------------
-// NGINX file parser
-// ----------------------------------------------------------------
-
-// type NGINX struct {
-// 	Settings []*SettingT `parser:"@@*"`
-// }
-
-// type SettingT struct {
-// 	SetingName   string         `parser:"@Name "`
-// 	SettingValue *SettingValueT `parser:"@@"`
-// }
-
-// type SettingValueT struct {
-// 	Primitive *PrimitiveT `parser:"( @@"`
-// 	Block     *BlockT     `parser:" | @@ )"`
-// }
-
-// type PrimitiveT struct {
-// 	Value string `parser:"@Value ';'"`
-// }
-
-// type BlockT struct {
-// 	Settings []*SettingT `parser:"'{' @@* '}'"`
-// }
-
-// /////////////////////////////////////////////////////
-// type Config struct {
-// 	// Entries    []*Entry      `parser:"@@*"`
-// 	Directives []*DirectiveT `parser:"@@*"`
-// }
-
-// type DirectiveT struct {
-// 	DirectiveKey   string          `parser:"@Ident"`
-// 	DirectiveValue DirectiveValueT `parser:"@@"`
-// }
-
-// type DirectiveValueT struct {
-// 	DirectiveName *DirectiveNameT `parser:"( @Indent"`
-// 	Value         *ValueT         `parser:"  | @@"`
-// 	Block         *BlockT         `parser:"  | @@ )"`
-// }
-
-// type DirectiveNameT struct {
-// 	Val string `parser:" @Ident (';'|'{')"`
-// }
-
-// type ValueT struct {
-// 	Val string `parser:" @Ident ';'"`
-// }
-
-// type BlockT struct {
-// 	Directives []*DirectiveT `parser:"'{' @@* '}'"`
-// }
-
-///////////////////////////////////////////////////////////////////////////
-
-// type Entry struct {
-// 	EntryKey  string `parser:"@Ident"`
-// 	EntryName *Value `parser:"( @@"`
-// 	// Value      *Value      `parser:"( @@"`
-// 	DobleValue *DobleValue `parser:"  | @@"`
-// 	Block      *Block      `parser:"  | @@ )"`
-// }
-
-// type Value struct {
-// 	Val string `parser:" @Ident (@Ident)* (';'|'{')"`
-// }
-
-// type DobleValue struct {
-// 	Val1 string `parser:" @Ident"`
-// 	Val2 string `parser:" @Ident ';'"`
-// }
-
-// type Block struct {
-// 	Entries []*Entry `parser:"'{' @@* '}'"`
-// }
-
-////////////////////////////////////////////////////////////////////////////////
-
+// Config representa la configuración completa de NGINX
 type NGINX struct {
-	Entries []*EntryT `parser:"@@*"`
+	Directives []DirectiveT
+	Blocks     []BlockT
 }
 
-type EntryT struct {
-	Key        string        `parser:"@Key ' '*"`
-	Directives []*DirectiveT `parser:"( @@ ';')"`
-	// Blocks     []*BlockT     `parser:"| @@ )"`
-}
-
+// Directive representa una directiva simple de NGINX
 type DirectiveT struct {
-	Val string `parser:"@Val*"`
-	// Val1 string `parser:"@Val ';'?"`
-	// Val2 string `parser:"@Val ';'"`
-	// Val []*ValT `parser:"@@ ';'"`
+	Name  string
+	Value string
 }
 
-type ValT struct {
-	Val string `parser:"@Val"`
-}
-
+// Block representa un bloque de configuración de NGINX (por ejemplo, server, location)
 type BlockT struct {
-	Entries []*EntryT `parser:"'{' @@ '}'"`
+	Name       string
+	Parameters string
+	Directives []DirectiveT
+	Blocks     []BlockT
+}
+
+// ParseConfig analiza el contenido del archivo de configuración
+func ParseNginxConfig(configStr string) (config NGINX) {
+	configStrLines := strings.Split(configStr, "\n")
+
+	for lineIndex := 0; lineIndex < len(configStrLines); lineIndex++ {
+		line := strings.TrimSpace(configStrLines[lineIndex])
+		// Skip Commets and empty strings
+		if len(line) == 0 || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// parse ngix blocks
+		if strings.HasSuffix(line, "{") {
+			open := 0
+			endBlockIndex := lineIndex
+			for k, v := range configStrLines[lineIndex:] {
+				if strings.HasSuffix(v, "}") {
+					open -= 1
+				} else if strings.HasSuffix(v, "{") {
+					open += 1
+				}
+				if open <= 0 {
+					endBlockIndex += k
+					break
+				}
+			}
+			fmt.Printf("block from '%d' to '%d'\n", lineIndex+1, endBlockIndex+1)
+			config.Blocks = append(config.Blocks, parseNginxBlock(configStrLines[lineIndex:endBlockIndex]))
+			lineIndex = endBlockIndex
+			continue
+		}
+
+		// parse nginx directives
+		endDirectiveIndex := lineIndex
+		for k, v := range configStrLines[lineIndex:] {
+			if strings.HasSuffix(v, ";") {
+				endDirectiveIndex += k
+				break
+			}
+		}
+		fmt.Printf("directive from '%d' to '%d'\n", lineIndex+1, endDirectiveIndex+1)
+		config.Directives = append(config.Directives, parseNginxDirective(configStrLines[lineIndex:endDirectiveIndex+1]))
+	}
+
+	return config
+}
+
+func parseNginxDirective(directiveLines []string) (directive DirectiveT) {
+	if len(directiveLines) == 1 {
+		parts := strings.Fields(directiveLines[0])
+		directive.Name = parts[0]
+		directive.Value = strings.TrimSuffix(strings.Join(parts[1:], " "), ";")
+		repr.Println(directive, repr.Indent("  "), repr.OmitEmpty(true))
+		return directive
+	}
+
+	directiveLines[len(directiveLines)-1] = strings.TrimSuffix(directiveLines[len(directiveLines)-1], ";")
+
+	firstLineParts := strings.Fields(directiveLines[0])
+	directive.Name = firstLineParts[0]
+	directiveLines[0] = strings.Join(firstLineParts[1:len(firstLineParts)-1], " ")
+
+	directive.Value = strings.Join(directiveLines, " ")
+
+	repr.Println(directive, repr.Indent("  "), repr.OmitEmpty(true))
+	return directive
+}
+
+func parseNginxBlock(blockLines []string) (block BlockT) {
+	repr.Println(blockLines, repr.Indent("  "), repr.OmitEmpty(true))
+	return block
 }
 
 func main() {
 	globals.InitLogger(globals.DEBUG)
+
 	program := filepath.Base(os.Args[0])
 	if len(os.Args) < 2 {
 		globals.Logger.Error(fmt.Sprintf("file as argument not provided (usage: %s <filepath>)", program))
 		os.Exit(1)
 	}
 
-	nginxConfigBytes, err := os.ReadFile(os.Args[1])
+	filepath := os.Args[1]
+	nginxConfigBytes, err := os.ReadFile(filepath)
 	if err != nil {
-		panic(err)
+		globals.Logger.Error(fmt.Sprintf("unable to read file %s: %s", filepath, err.Error()))
+		os.Exit(1)
 	}
 
 	// ----------------------------------------------------------------
 	// NGINX file parser configuration
 	// ----------------------------------------------------------------
-	// nginxLexer := lexer.MustSimple([]lexer.SimpleRule{
-	// 	{Name: `Name`, Pattern: settingNameRegex},
-	// 	{Name: `Value`, Pattern: `[^;]+`},
-	// 	{Name: "EscapeChars", Pattern: escapeCharsRegex},
-	// 	{Name: "Comments", Pattern: commentsRegex},
-	// 	{Name: "whitespace", Pattern: `(\s+)|(\n+)`},
-	// })
-	// nginxParser := participle.MustBuild[NGINX](
-	// 	participle.Lexer(nginxLexer),
-	// )
 
-	// fmt.Printf("%s\n\n", nginxParser.String())
+	config := ParseNginxConfig(string(nginxConfigBytes))
+	_ = config
 
-	// ----------------------------------------------------------------
-	// NGINX parse file
-	// ----------------------------------------------------------------
+	// Imprimir la configuración analizada
+	// repr.Println(config, repr.Indent("  "), repr.OmitEmpty(true))
+	os.Exit(0)
 
-	// nginx, err := nginxParser.ParseString("", string(nginxConfigBytes))
-	// repr.Println(nginx, repr.Indent("  "), repr.OmitEmpty(true))
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	nginxLexer := lexer.MustSimple([]lexer.SimpleRule{
-		// {Name: `Name`, Pattern: settingNameRegex},
-		// {Name: `Key`, Pattern: `[A-Za-z*][-A-Za-z0-9_*]*`},
-		{Name: `Key`, Pattern: `[^\s]+`},
-		// {Name: `Val`, Pattern: `([\.\/A-Za-z0-9_*]+)`},
-		{Name: `Val`, Pattern: `([^;]+)`},
-		{Name: "Comments", Pattern: commentsRegex},
-		{Name: "EscapeChars", Pattern: escapeCharsRegex},
-		{Name: "whitespace", Pattern: `(\s+)`},
-	})
-	var parser = participle.MustBuild[NGINX](
-		participle.Lexer(nginxLexer),
-	)
-	sep := "--------------------------------\n"
-	fmt.Printf(
-		sep+"%s\n"+sep,
-		parser.String(),
-	)
-	expr, err := parser.ParseString("", string(nginxConfigBytes))
-	repr.Println(expr, repr.Indent("  "), repr.OmitEmpty(true))
-	fmt.Print(sep)
+	//--------------------------------------------
+	p := parser.NewStringParser(string(nginxConfigBytes))
+	c, err := p.Parse()
 	if err != nil {
-		panic(err)
+		globals.Logger.Error(fmt.Sprintf("unable to parse config '%s'", filepath))
+		os.Exit(1)
 	}
+	// fmt.Print(dumper.DumpConfig(c, dumper.IndentedStyle))
+	repr.Println(c, repr.Indent("  "), repr.OmitEmpty(true))
+	os.Exit(0)
+
+	nginxDirectiveRegex := "([a-zA-Z0-9_]*([ ]+))([a-zA-Z0-9_/.]*([ ]+))?([a-zA-Z0-9_/.]*);"
+	re, _ := regexp.Compile(nginxDirectiveRegex)
+	directiveMatches := re.FindAll(nginxConfigBytes, -1)
+	if directiveMatches == nil {
+		globals.Logger.Error(fmt.Sprintf("unable to match directives in file %s", filepath))
+		os.Exit(1)
+	}
+
+	nginxContextRegex := "([a-zA-Z0-9_]*([ \n]+)){([ \n]+)(.*)([ \n]+)}"
+	re, _ = regexp.Compile(nginxContextRegex)
+	contextMatches := re.FindAll(nginxConfigBytes, -1)
+	if contextMatches == nil {
+		globals.Logger.Error(fmt.Sprintf("unable to match contexts in file %s", filepath))
+		os.Exit(1)
+	}
+	repr.Println(contextMatches, repr.Indent("  "), repr.OmitEmpty(true))
 }
