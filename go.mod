@@ -6,8 +6,6 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/alecthomas/participle/v2 v2.1.1
-	github.com/alecthomas/repr v0.4.0
-	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
@@ -22,10 +20,12 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/alecthomas/assert/v2 v2.6.0 // indirect
+	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
+	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect

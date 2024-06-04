@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"prototypes/globals"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -61,7 +63,14 @@ type ListT struct {
 }
 
 func main() {
-	libconfigConfigBytes, err := os.ReadFile("proxysql.cnf")
+	globals.InitLogger(globals.DEBUG)
+	program := filepath.Base(os.Args[0])
+	if len(os.Args) < 2 {
+		globals.Logger.Error(fmt.Sprintf("file as argument not provided (usage: %s <filepath>)", program))
+		os.Exit(1)
+	}
+
+	libconfigConfigBytes, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		panic(err)
 	}

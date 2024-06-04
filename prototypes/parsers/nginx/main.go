@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"prototypes/globals"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -130,6 +132,18 @@ type BlockT struct {
 }
 
 func main() {
+	globals.InitLogger(globals.DEBUG)
+	program := filepath.Base(os.Args[0])
+	if len(os.Args) < 2 {
+		globals.Logger.Error(fmt.Sprintf("file as argument not provided (usage: %s <filepath>)", program))
+		os.Exit(1)
+	}
+
+	nginxConfigBytes, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+
 	// ----------------------------------------------------------------
 	// NGINX file parser configuration
 	// ----------------------------------------------------------------
@@ -149,10 +163,6 @@ func main() {
 	// ----------------------------------------------------------------
 	// NGINX parse file
 	// ----------------------------------------------------------------
-	nginxConfigBytes, err := os.ReadFile("nginx-primitive.conf")
-	if err != nil {
-		panic(err)
-	}
 
 	// nginx, err := nginxParser.ParseString("", string(nginxConfigBytes))
 	// repr.Println(nginx, repr.Indent("  "), repr.OmitEmpty(true))
