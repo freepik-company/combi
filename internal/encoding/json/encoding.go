@@ -3,6 +3,7 @@ package json
 import (
 	"encoding/json"
 	"os"
+	"regexp"
 )
 
 type JsonT struct {
@@ -26,6 +27,12 @@ func (e *JsonT) DecodeConfig(filepath string) (err error) {
 }
 
 func (e *JsonT) DecodeConfigBytes(configBytes []byte) (err error) {
+	if ok, err := regexp.Match("^[ ]*$", configBytes); ok {
+		if err != nil {
+			return err
+		}
+		configBytes = []byte("{}")
+	}
 	err = json.Unmarshal(configBytes, &e.ConfigStruct)
 	return err
 }
