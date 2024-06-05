@@ -9,155 +9,139 @@ import (
 	"strings"
 
 	"github.com/alecthomas/repr"
-
-	"github.com/tufanbarisyildirim/gonginx/parser"
 )
 
-// Config representa la configuración completa de NGINX
 type NGINX struct {
+	RootContent BlockContentT
+}
+
+type BlockContentT struct {
 	Directives []DirectiveT
 	Blocks     []BlockT
 }
 
-// Directive representa una directiva simple de NGINX
 type DirectiveT struct {
 	Name  string
 	Value string
 }
 
-// Block representa un bloque de configuración de NGINX (por ejemplo, server, location)
 type BlockT struct {
-	Name       string
-	Parameters string
-	Directives []DirectiveT
-	Blocks     []BlockT
+	Name         string
+	Parameters   string
+	BlockContent BlockContentT
 }
 
 // ParseConfig analiza el contenido del archivo de configuración
-func ParseNginxConfig(configStr string) (config NGINX) {
-	configStrLines := strings.Split(configStr, "\n")
+func ParseNginxConfig(configStr string) (config NGINX, err error) {
+	// Remove one line comments in file
+	re := regexp.MustCompile(`#[^\n]*?\n`)
+	configStr = re.ReplaceAllString(configStr, "\n")
 
-	for lineIndex := 0; lineIndex < len(configStrLines); lineIndex++ {
-		line := strings.TrimSpace(configStrLines[lineIndex])
-		// Skip Commets and empty strings
-		if len(line) == 0 || strings.HasPrefix(line, "#") {
+	// Format configuration to parse nginx config format by line
+	configStr = strings.Join(strings.Fields(configStr), " ")
+	configStr = strings.ReplaceAll(configStr, "\n", "")
+	configStr = strings.ReplaceAll(configStr, "{", " {\n")
+	configStr = strings.ReplaceAll(configStr, "}", "}\n")
+	configStr = strings.ReplaceAll(configStr, ";", " ;\n")
+	configStr = strings.ReplaceAll(configStr, "\n ", "\n")
+
+	// Parse formatted nginx configuration
+	configStrLines := strings.Split(configStr, "\n")
+	err = parseNginxBlockContent(&config.RootContent, configStrLines)
+	return config, err
+}
+
+func parseNginxBlockContent(blockContent *BlockContentT, blockContentLines []string) (err error) {
+	// Parse block content
+	for blockLineIndex := 0; blockLineIndex < len(blockContentLines); blockLineIndex++ {
+		line := strings.TrimSpace(blockContentLines[blockLineIndex])
+		// Skip empty strings (only to be carefull)
+		if len(line) == 0 {
 			continue
 		}
 
-		// parse ngix blocks
+		// Parse nginx directives
+		if strings.HasSuffix(line, ";") {
+			subDirective := parseNginxDirective(blockContentLines[blockLineIndex])
+			blockContent.Directives = append(blockContent.Directives, subDirective)
+		}
+
+		// Parse ngix blocks
 		if strings.HasSuffix(line, "{") {
-			open := 0
-			endBlockIndex := lineIndex
-			for k, v := range configStrLines[lineIndex:] {
-				if strings.HasSuffix(v, "}") {
-					open -= 1
-				} else if strings.HasSuffix(v, "{") {
+			startBlockLines := blockContentLines[blockLineIndex:]
+			i, open := 0, 0
+			for ; i < len(startBlockLines); i++ {
+				if strings.HasSuffix(startBlockLines[i], "{") {
 					open += 1
 				}
+				if strings.HasSuffix(startBlockLines[i], "}") {
+					open -= 1
+				}
 				if open <= 0 {
-					endBlockIndex += k
 					break
 				}
 			}
-			fmt.Printf("block from '%d' to '%d'\n", lineIndex+1, endBlockIndex+1)
-			config.Blocks = append(config.Blocks, parseNginxBlock(configStrLines[lineIndex:endBlockIndex]))
-			lineIndex = endBlockIndex
+			if open > 0 {
+				err = fmt.Errorf("nginx block '%s' not close", blockContentLines[blockLineIndex])
+				return err
+			}
+			subBlock, err := parseNginxBlock(blockContentLines[blockLineIndex : blockLineIndex+i+1])
+			if err != nil {
+				return err
+			}
+			blockContent.Blocks = append(blockContent.Blocks, subBlock)
+			blockLineIndex += i
 			continue
 		}
 
-		// parse nginx directives
-		endDirectiveIndex := lineIndex
-		for k, v := range configStrLines[lineIndex:] {
-			if strings.HasSuffix(v, ";") {
-				endDirectiveIndex += k
-				break
-			}
+		if strings.HasSuffix(line, "}") {
+			err = fmt.Errorf("over closed bracket '}' in nginx configuration")
+			return err
 		}
-		fmt.Printf("directive from '%d' to '%d'\n", lineIndex+1, endDirectiveIndex+1)
-		config.Directives = append(config.Directives, parseNginxDirective(configStrLines[lineIndex:endDirectiveIndex+1]))
 	}
 
-	return config
+	return err
 }
 
-func parseNginxDirective(directiveLines []string) (directive DirectiveT) {
-	if len(directiveLines) == 1 {
-		parts := strings.Fields(directiveLines[0])
-		directive.Name = parts[0]
-		directive.Value = strings.TrimSuffix(strings.Join(parts[1:], " "), ";")
-		repr.Println(directive, repr.Indent("  "), repr.OmitEmpty(true))
-		return directive
-	}
-
-	directiveLines[len(directiveLines)-1] = strings.TrimSuffix(directiveLines[len(directiveLines)-1], ";")
-
-	firstLineParts := strings.Fields(directiveLines[0])
-	directive.Name = firstLineParts[0]
-	directiveLines[0] = strings.Join(firstLineParts[1:len(firstLineParts)-1], " ")
-
-	directive.Value = strings.Join(directiveLines, " ")
-
-	repr.Println(directive, repr.Indent("  "), repr.OmitEmpty(true))
+func parseNginxDirective(directiveLine string) (directive DirectiveT) {
+	parts := strings.Fields(directiveLine)
+	directive.Name = parts[0]
+	directive.Value = strings.Join(parts[1:len(parts)-1], " ")
 	return directive
 }
 
-func parseNginxBlock(blockLines []string) (block BlockT) {
-	repr.Println(blockLines, repr.Indent("  "), repr.OmitEmpty(true))
-	return block
+func parseNginxBlock(blockLines []string) (block BlockT, err error) {
+	// Parse name and parameters
+	nameParamsParts := strings.Fields(blockLines[0])
+	block.Name = nameParamsParts[0]
+	block.Parameters = strings.Join(nameParamsParts[1:len(nameParamsParts)-1], " ")
+
+	// Parse block content
+	err = parseNginxBlockContent(&block.BlockContent, blockLines[1:len(blockLines)-1])
+	return block, err
 }
 
 func main() {
-	globals.InitLogger(globals.DEBUG)
+	globals.InitLogger(globals.DEBUG, nil)
 
 	program := filepath.Base(os.Args[0])
 	if len(os.Args) < 2 {
-		globals.Logger.Error(fmt.Sprintf("file as argument not provided (usage: %s <filepath>)", program))
-		os.Exit(1)
+		globals.Logger.Fatalf("file as argument not provided (usage: %s <filepath>)", program)
 	}
 
 	filepath := os.Args[1]
 	nginxConfigBytes, err := os.ReadFile(filepath)
 	if err != nil {
-		globals.Logger.Error(fmt.Sprintf("unable to read file %s: %s", filepath, err.Error()))
-		os.Exit(1)
+		globals.Logger.Fatalf("unable to read file %s: %s", filepath, err.Error())
 	}
 
 	// ----------------------------------------------------------------
 	// NGINX file parser configuration
 	// ----------------------------------------------------------------
 
-	config := ParseNginxConfig(string(nginxConfigBytes))
-	_ = config
-
-	// Imprimir la configuración analizada
-	// repr.Println(config, repr.Indent("  "), repr.OmitEmpty(true))
-	os.Exit(0)
-
-	//--------------------------------------------
-	p := parser.NewStringParser(string(nginxConfigBytes))
-	c, err := p.Parse()
+	config, err := ParseNginxConfig(string(nginxConfigBytes))
 	if err != nil {
-		globals.Logger.Error(fmt.Sprintf("unable to parse config '%s'", filepath))
-		os.Exit(1)
+		globals.Logger.Fatalf("unable to parse file %s: %s", filepath, err.Error())
 	}
-	// fmt.Print(dumper.DumpConfig(c, dumper.IndentedStyle))
-	repr.Println(c, repr.Indent("  "), repr.OmitEmpty(true))
-	os.Exit(0)
-
-	nginxDirectiveRegex := "([a-zA-Z0-9_]*([ ]+))([a-zA-Z0-9_/.]*([ ]+))?([a-zA-Z0-9_/.]*);"
-	re, _ := regexp.Compile(nginxDirectiveRegex)
-	directiveMatches := re.FindAll(nginxConfigBytes, -1)
-	if directiveMatches == nil {
-		globals.Logger.Error(fmt.Sprintf("unable to match directives in file %s", filepath))
-		os.Exit(1)
-	}
-
-	nginxContextRegex := "([a-zA-Z0-9_]*([ \n]+)){([ \n]+)(.*)([ \n]+)}"
-	re, _ = regexp.Compile(nginxContextRegex)
-	contextMatches := re.FindAll(nginxConfigBytes, -1)
-	if contextMatches == nil {
-		globals.Logger.Error(fmt.Sprintf("unable to match contexts in file %s", filepath))
-		os.Exit(1)
-	}
-	repr.Println(contextMatches, repr.Indent("  "), repr.OmitEmpty(true))
+	repr.Println(config, repr.Indent("  "), repr.OmitEmpty(true))
 }

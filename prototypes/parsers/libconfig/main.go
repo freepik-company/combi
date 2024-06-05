@@ -63,16 +63,16 @@ type ListT struct {
 }
 
 func main() {
-	globals.InitLogger(globals.DEBUG)
+	globals.InitLogger(globals.DEBUG, nil)
 	program := filepath.Base(os.Args[0])
 	if len(os.Args) < 2 {
-		globals.Logger.Error(fmt.Sprintf("file as argument not provided (usage: %s <filepath>)", program))
-		os.Exit(1)
+		globals.Logger.Fatalf("file as argument not provided (usage: %s <filepath>)", program)
 	}
 
-	libconfigConfigBytes, err := os.ReadFile(os.Args[1])
+	filepath := os.Args[1]
+	libconfigConfigBytes, err := os.ReadFile(filepath)
 	if err != nil {
-		panic(err)
+		globals.Logger.Fatalf("unable to read file %s: %s", filepath, err.Error())
 	}
 
 	// ----------------------------------------------------------------
@@ -94,6 +94,6 @@ func main() {
 	libconfig, err := libconfigParser.ParseString("", string(libconfigConfigBytes))
 	repr.Println(libconfig, repr.Indent("  "), repr.OmitEmpty(true))
 	if err != nil {
-		panic(err)
+		globals.Logger.Fatalf("unable to parse file %s: %s", filepath, err.Error())
 	}
 }
