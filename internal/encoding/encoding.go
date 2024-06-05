@@ -3,11 +3,13 @@ package encoding
 import (
 	"combi/internal/encoding/json"
 	"combi/internal/encoding/libconfig"
+	"combi/internal/encoding/nginx"
 )
 
 const (
-	libconfigEncoderKey = `libconfig`
 	jsonEncoderKey      = `json`
+	nginxEncoderKey     = `nginx`
+	libconfigEncoderKey = `libconfig`
 )
 
 type EncoderT interface {
@@ -26,8 +28,9 @@ type EncoderT interface {
 
 func GetEncoders() (encoders map[string]EncoderT) {
 	encoders = map[string]EncoderT{
-		libconfigEncoderKey: &libconfig.LibconfigT{},
 		jsonEncoderKey:      &json.JsonT{},
+		nginxEncoderKey:     &nginx.NginxT{},
+		libconfigEncoderKey: &libconfig.LibconfigT{},
 	}
 	return encoders
 }

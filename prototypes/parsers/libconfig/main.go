@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"prototypes/globals"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -61,9 +63,16 @@ type ListT struct {
 }
 
 func main() {
-	libconfigConfigBytes, err := os.ReadFile("proxysql.cnf")
+	globals.InitLogger(globals.DEBUG, nil)
+	program := filepath.Base(os.Args[0])
+	if len(os.Args) < 2 {
+		globals.Logger.Fatalf("file as argument not provided (usage: %s <filepath>)", program)
+	}
+
+	filepath := os.Args[1]
+	libconfigConfigBytes, err := os.ReadFile(filepath)
 	if err != nil {
-		panic(err)
+		globals.Logger.Fatalf("unable to read file %s: %s", filepath, err.Error())
 	}
 
 	// ----------------------------------------------------------------
@@ -85,6 +94,6 @@ func main() {
 	libconfig, err := libconfigParser.ParseString("", string(libconfigConfigBytes))
 	repr.Println(libconfig, repr.Indent("  "), repr.OmitEmpty(true))
 	if err != nil {
-		panic(err)
+		globals.Logger.Fatalf("unable to parse file %s: %s", filepath, err.Error())
 	}
 }
