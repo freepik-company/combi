@@ -122,7 +122,7 @@ func parseNginxBlock(blockLines []string) (block BlockT, err error) {
 }
 
 func main() {
-	globals.InitLogger(globals.DEBUG, nil)
+	globals.InitLogger(globals.DEBUG, nil, "prototype", "nginx")
 
 	program := filepath.Base(os.Args[0])
 	if len(os.Args) < 2 {
@@ -130,6 +130,7 @@ func main() {
 	}
 
 	filepath := os.Args[1]
+	globals.Logger.Infof("reading file '%s'", filepath)
 	nginxConfigBytes, err := os.ReadFile(filepath)
 	if err != nil {
 		globals.Logger.Fatalf("unable to read file %s: %s", filepath, err.Error())
@@ -139,6 +140,7 @@ func main() {
 	// NGINX file parser configuration
 	// ----------------------------------------------------------------
 
+	globals.Logger.Infof("parse configuration")
 	config, err := ParseNginxConfig(string(nginxConfigBytes))
 	if err != nil {
 		globals.Logger.Fatalf("unable to parse file %s: %s", filepath, err.Error())
