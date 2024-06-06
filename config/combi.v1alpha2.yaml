@@ -1,0 +1,84 @@
+# combi configuration file
+kind: "" # nginx|json|libconfig
+global:
+  source:
+    raw: ""
+    filepath: ""
+    git:
+      sshUrl: ""
+      sshKeyFilepath: ""
+      branch: ""
+      filepath: ""
+    kubernetes:
+      configMapRef:
+        namespace: ""
+        name: ""
+        key: ""
+      secretRef:
+        namespace: ""
+        name: ""
+        key: ""
+
+  conditions:
+    mandatory: []
+    optional: []
+  actions:
+    onSuccess: []
+    onFailure: []
+configs:
+  example1:
+    mergedConfig: "" # path to the result file with the merged config
+    target: # target config to merge the sources configs
+      raw: ""
+      filepath: ""
+      git:
+        sshUrl: ""
+        sshKeyFilepath: ""
+        branch: ""
+        filepath: ""
+      kubernetes:
+        configMapRef:
+          namespace: ""
+          name: ""
+          key: ""
+        secretRef:
+          namespace: ""
+          name: ""
+          key: ""
+    source:  # source config to merge in target file
+      raw: ""
+      filepath: ""
+      git:
+        sshUrl: ""
+        sshKeyFilepath: ""
+        branch: ""
+        filepath: ""
+      kubernetes:
+        configMapRef:
+          namespace: ""
+          name: ""
+          key: ""
+        secretRef:
+          namespace: ""
+          name: ""
+          key: ""
+
+    conditions:
+      mandatory: []
+      # - name: ""
+      #   template: ""
+      #   value: ""
+      optional: []
+      # - name: ""
+      #   template: ""
+      #   value: ""
+
+    actions:
+      onSuccess: []
+      # - name: ""
+      #   command: []
+      #   script: ""
+      onFailure: []
+      # - name: ""
+      #   command: []
+      #   script: ""

@@ -50,18 +50,69 @@ Thinking about these problems and possible solutions, we have decided to create 
 
 This project provides the binary files in differents architectures to make it easy to use wherever wanted.
 
-1. Creates a combi configuration specifying in it the configuration file that is going to be modified (targetConfig), and the file that is going to be created with the final result (mergedConfig).
-2. Add optional conditions to this configuration or also that must be met (optional)
-3. Add actions that must be executed if the conditions are met, or also if they fail (optional)
-4. Add the combi configuration to a git repository (or different source in the future).
-5. Add this binary to your vm or container image that contains the service whose configuration you want to manage.
-6. Run it in the background with the flags that this tool needs to get the config from the specified source.
-
 > **IMPORTANT**
 >
 > Why this project does not have a docker image?
 >
 > The objective of this tool is work in the background updating the desired configuration of a different service that runs in the same instance (vm, container, etc), that is why the main command is called daemon, and its the reason there is not a docker image with this binary alone.
+
+### Configuration
+
+Current configuration version: `v1alpha1`
+
+#### Root Parameters
+
+| Name   | Default | Description |
+|:---    |:---     |:---         |
+| `kind` | `""`    | type of the configuration files to manage. The possible values ​​of this field can be found in the [supported configuration formats](#supported-configuration-formats) section |
+
+#### Global Parameters
+
+| Name                          | Default | Description |
+|:---                           |:---     |:---         |
+| `global.rawConfig`            | `""`    | config specification to merge in `targetConfig` |
+| `global.conditions.mandatory` | `[]`    | list of mandatory conditions that `mergedConfig` have to achive |
+| `global.conditions.optional`  | `[]`    | list of optional conditions that `mergedConfig` have to check |
+| `global.actions.onSuccess`    | `[]`    | list of actions that `combi` has to execute in case of mandatory conditions success |
+| `global.actions.onFailure`    | `[]`    | list of actions that `combi` has to execute in case of mandatory conditions fail |
+
+#### Configs Parameters
+
+| Name                                        | Default | Description |
+|:---                                         |:---     |:---         |
+| `configs`                                   | `{}`    | map with the different configuration to manage |
+| `configs.<config-key>.targetConfig`         | `""`    | configuration filepath to merge the `global.rawConfig` and `configs.<config-key>.rawConfig` |
+| `configs.<config-key>.mergedConfig`         | `""`    | filepath to create the configuration file after the merge and conditions |
+| `configs.<config-key>.rawConfig`            | `""`    | string with the configuration to merge in the `targetConfig` |
+| `configs.<config-key>.conditions.mandatory` | `[]`    | list of specific mandatory conditions |
+| `configs.<config-key>.conditions.optional`  | `[]`    | list of specific optional conditions |
+| `configs.<config-key>.actions.onSuccess`    | `[]`    | list of specific success actions |
+| `configs.<config-key>.actions.onFailure`    | `[]`    | list of specific fail actions |
+
+#### Condition List Item Parameters
+
+| Name       | Default | Description |
+|:---        |:---     |:---         |
+| `name`     | `""`    | name of the current condition to evaluate |
+| `template` | `""`    | golang template to compile and extract some config value to compare with condition `value` |
+| `value`    | `""`    | value to compare with the result of `template` |
+
+#### Action List Item Parameters
+
+| Name       | Default | Description |
+|:---        |:---     |:---         |
+| `name`     | `""`    | name of the current action to execute |
+| `command`  | `[]`    | string list with the command and his argument to execute |
+| `script`   | `""`    | string with a script that combi generate to execute |
+
+### Sources
+
+You can consume the combi configuration from different sources.
+
+| Name    | Description |
+|:---     |:---         |
+| `local` | combi consumes his configuration from local file in the system |
+| `git`   | combi consumes his configuration from file in a remote repository |
 
 ## How does it work?
 
@@ -229,12 +280,15 @@ group_example=
 }
 ```
 
-## TODO list
+## Supported configuration formats
 
-- [ ] Add support to nginx conf files
-- [ ] Add support to yaml files
-- [ ] Add support to json files
-- [ ] Add support to hcl files
+| Format      | Status |
+|:---         |:---    |
+| `json`      | ✅     |
+| `nginx`     | ✅     |
+| `libconfig` | ✅     |
+| `yaml`      | ❌     |
+| `hcl`       | ❌     |
 
 ## How to collaborate
 

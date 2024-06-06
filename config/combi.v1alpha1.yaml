@@ -1,5 +1,5 @@
 # combi configuration file
-kind: "" # libconfig|json
+kind: "" # nginx|json|libconfig
 global:
   rawConfig: ""
   conditions:
