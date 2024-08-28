@@ -1,0 +1,35 @@
+# combi configuration file
+kind: "" # nginx|json|libconfig
+global:
+  rawConfig: ""
+  conditions:
+    mandatory: []
+    optional: []
+  actions:
+    onSuccess: []
+    onFailure: []
+configs:
+  example1:
+    targetConfig: "" # path to the target file to merge the raw config
+    mergedConfig: "" # path to the result file with the merged config
+    rawConfig: "" # raw config to merge in target file
+
+    conditions:
+      mandatory: []
+      # - name: ""
+      #   template: ""
+      #   value: ""
+      optional: []
+      # - name: ""
+      #   template: ""
+      #   value: ""
+
+    actions:
+      onSuccess: []
+      # - name: ""
+      #   command: []
+      #   script: ""
+      onFailure: []
+      # - name: ""
+      #   command: []
+      #   script: ""
