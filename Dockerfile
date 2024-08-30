@@ -27,5 +27,6 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/combi .
 USER 65532:65532
+RUN mkdir -p /root/.ssh && touch /root/.ssh/known_hosts
 
 ENTRYPOINT ["/combi"]
