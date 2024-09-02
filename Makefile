@@ -57,6 +57,10 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	- $(CONTAINER_TOOL) buildx rm project-builder
 	rm Dockerfile.cross
 
+docker-kind-build:
+	docker build --tag '$(BINARY):test' .
+	kind load docker-image $(BINARY):test
+
 .PHONY: build
 build: fmt vet ## Build manager binary.
 	go build -o bin/combi cmd/combi/main.go

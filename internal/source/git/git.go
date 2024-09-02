@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 
@@ -27,7 +28,7 @@ func (s *GitT) Init(f flags.DaemonFlagsT) {
 	s.RepoSshUrl = f.GitSshUrl
 	s.RepoBranch = f.GitBranch
 	s.RepoPath = f.TmpDir + "/repo"
-	s.ConfigFilepath = f.SourcePath
+	s.ConfigFilepath = fmt.Sprintf("%s/%s", s.RepoPath, f.SourcePath)
 }
 
 func (s *GitT) GetConfig() (config []byte, err error) {

@@ -23,10 +23,12 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o co
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-# FROM gcr.io/distroless/static:nonroot
 FROM debian:bullseye-slim
 WORKDIR /
 COPY --from=builder /workspace/combi .
-RUN mkdir -p /root/.ssh && touch /root/.ssh/known_hosts
+RUN apt update && \
+    apt install --yes openssh-client && \
+    mkdir -p ~/.ssh && \
+    ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
 ENTRYPOINT ["/combi"]
