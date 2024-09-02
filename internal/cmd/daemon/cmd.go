@@ -67,7 +67,7 @@ func RunCommand(cmd *cobra.Command, args []string) {
 
 	logger.Log.Infof("init configs from defined sources")
 
-	if reflect.ValueOf(daemon.config.Global).IsZero() {
+	if reflect.ValueOf(daemon.config.Global.Source).IsZero() {
 		daemon.config.Global.Source.Type = "raw"
 		daemon.config.Global.Source.RawConfig = ""
 	}

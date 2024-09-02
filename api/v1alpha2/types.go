@@ -2,25 +2,25 @@ package v1alpha2
 
 type CombiConfigT struct {
 	Kind   string  `yaml:"kind"`
-	Global GlobalT `yaml:"global"`
+	Global GlobalT `yaml:"global,omitempty"`
 	Config ConfigT `yaml:"config"`
 }
 
 type GlobalT struct {
-	Source     SourceT     `yaml:"source"`
-	Conditions ConditionsT `yaml:"conditions"`
-	Actions    ActionsT    `yaml:"actions"`
+	Source     SourceT     `yaml:"source,omitempty"`
+	Conditions ConditionsT `yaml:"conditions,omitempty"`
+	Actions    ActionsT    `yaml:"actions,omitempty"`
 }
 
 type ConfigT struct {
 	MergedConfig string      `yaml:"mergedConfig"`
 	Source       SourceT     `yaml:"source"`
-	Conditions   ConditionsT `yaml:"conditions"`
-	Actions      ActionsT    `yaml:"actions"`
+	Conditions   ConditionsT `yaml:"conditions,omitempty"`
+	Actions      ActionsT    `yaml:"actions,omitempty"`
 }
 
 type SourceT struct {
-	Type       string      `yaml:"type,omitempty"`
+	Type       string      `yaml:"type"`
 	RawConfig  string      `yaml:"rawConfig,omitempty"`
 	Filepath   string      `yaml:"filepath,omitempty"`
 	Git        GitT        `yaml:"git,omitempty"`

@@ -55,38 +55,40 @@ config:
       }
 
   conditions:
-    mandatory:
-    - name: "search primitive value to check condition"
-      template: |
-        {{- $config := . -}}
-        {{- printf "%s" $config.int64field -}}
-      value: "500L"
-    - name: "search group value to check condition"
-      template: |
-        {{- $config := . -}}
-        {{- printf "%s" $config.mysql_variables.threads -}}
-      value: "2"
-    - name: "search list value to check condition"
-      template: |
-        {{- $config := . -}}
-          {{- range $i, $v := $config.mysql_servers -}}
-              {{- if (eq $v.hostgroup "0" ) -}}
-                {{- printf "%s" $v.max_connections -}}
-              {{- end -}}
-          {{- end -}}
-      value: "1000"
-    - name: "search env variable to check condition"
-      template: |
-        {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
-      value: "true"
-    optional:
-    - name: "print array values condition"
-      template: |
-        {{- $config := . -}}
-        {{- range $k, $v := $config.array_test -}}
-          [{{- printf "%v" $k -}}] => {{- printf "%v, " $v -}}
-        {{- end -}}
-      value: ""
+    mandatory: []
+    optional: []
+  #   mandatory:
+  #   - name: "search primitive value to check condition"
+  #     template: |
+  #       {{- $config := . -}}
+  #       {{- printf "%s" $config.int64field -}}
+  #     value: "500L"
+  #   - name: "search group value to check condition"
+  #     template: |
+  #       {{- $config := . -}}
+  #       {{- printf "%s" $config.mysql_variables.threads -}}
+  #     value: "2"
+  #   - name: "search list value to check condition"
+  #     template: |
+  #       {{- $config := . -}}
+  #         {{- range $i, $v := $config.mysql_servers -}}
+  #             {{- if (eq $v.hostgroup "0" ) -}}
+  #               {{- printf "%s" $v.max_connections -}}
+  #             {{- end -}}
+  #         {{- end -}}
+  #     value: "1000"
+  #   - name: "search env variable to check condition"
+  #     template: |
+  #       {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
+  #     value: "true"
+  #   optional:
+  #   - name: "print array values condition"
+  #     template: |
+  #       {{- $config := . -}}
+  #       {{- range $k, $v := $config.array_test -}}
+  #         [{{- printf "%v" $k -}}] => {{- printf "%v, " $v -}}
+  #       {{- end -}}
+  #     value: ""
 
   actions:
     onSuccess:

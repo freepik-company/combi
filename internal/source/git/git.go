@@ -1,9 +1,14 @@
 package git
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"combi/api/v1alpha2"
 	"combi/internal/globals"
@@ -24,12 +29,14 @@ type GitSourceT struct {
 }
 
 func (s *GitSourceT) Init(source v1alpha2.SourceT) {
-
-	s.SshKeyFilepath = source.Git.SshKeyFilepath
 	s.RepoSshUrl = source.Git.SshUrl
 	s.RepoBranch = source.Git.Branch
-	s.RepoPath = globals.TmpDir + "/repo"
+
+	repoFolder := s.getRepoMD5Hash()
+	s.RepoPath = globals.TmpDir + "/repos/" + repoFolder
+
 	s.ConfigFilepath = fmt.Sprintf("%s/%s", s.RepoPath, source.Git.Filepath)
+	s.SshKeyFilepath = source.Git.SshKeyFilepath
 }
 
 func (s *GitSourceT) GetConfig() (config []byte, updated bool, err error) {
@@ -69,4 +76,14 @@ func (s *GitSourceT) GetConfig() (config []byte, updated bool, err error) {
 	}
 
 	return config, updated, err
+}
+
+func (s *GitSourceT) getRepoMD5Hash() string {
+	sshUrlParts := strings.Split(s.RepoSshUrl, "/")
+	repoName := sshUrlParts[len(sshUrlParts)-1]
+	repoID := strconv.FormatInt(int64(rand.Int()), 10)
+	repoFolder := strings.Join([]string{repoName, s.RepoBranch, repoID}, ".")
+
+	hash := md5.Sum([]byte(repoFolder))
+	return hex.EncodeToString(hash[:])
 }
