@@ -1,21 +1,24 @@
 package source
 
 import (
-	"combi/internal/flags"
+	"combi/api/v1alpha2"
+	"combi/internal/source/file"
 	"combi/internal/source/git"
-	"combi/internal/source/local"
+	"combi/internal/source/kube"
+	"combi/internal/source/raw"
 )
 
 type SourceT interface {
-	Init(f flags.DaemonFlagsT)
-	GetConfig() (config []byte, err error)
-	NeedUpdate() bool
+	Init(source v1alpha2.SourceT)
+	GetConfig() (config []byte, updated bool, err error)
 }
 
 func GetSources() (sources map[string]SourceT) {
 	sources = map[string]SourceT{
-		"local": &local.LocalT{},
-		"git":   &git.GitT{},
+		"raw":        &raw.RawSourceT{},
+		"file":       &file.FileSourceT{},
+		"git":        &git.GitSourceT{},
+		"kubernetes": &kube.KubeSourceT{},
 	}
 	return sources
 }

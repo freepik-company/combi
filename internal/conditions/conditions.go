@@ -3,8 +3,8 @@ package conditions
 import (
 	"fmt"
 
-	"combi/api/v1alpha1"
-	"combi/internal/globals"
+	"combi/api/v1alpha2"
+	"combi/internal/logger"
 	"combi/internal/template"
 )
 
@@ -13,7 +13,7 @@ const (
 	optionalConditionErrorMessage  = "optional condition '%s' fail with value { %s } and result { %s }"
 )
 
-func EvalConditions(conditions *v1alpha1.ConditionsT, config *map[string]interface{}) (success bool, err error) {
+func EvalConditions(conditions *v1alpha2.ConditionsT, config *map[string]interface{}) (success bool, err error) {
 	for _, condition := range conditions.Mandatory {
 		result, err := template.EvaluateTemplate(condition.Template, *config)
 		if err != nil {
@@ -33,7 +33,7 @@ func EvalConditions(conditions *v1alpha1.ConditionsT, config *map[string]interfa
 		}
 
 		if condition.Value != result {
-			globals.ExecContext.Logger.Warnf(optionalConditionErrorMessage, condition.Name, condition.Value, result)
+			logger.Log.Warnf(optionalConditionErrorMessage, condition.Name, condition.Value, result)
 		}
 	}
 

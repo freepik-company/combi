@@ -1,7 +1,7 @@
 package json
 
 import (
-	"combi/internal/globals"
+	"combi/internal/logger"
 )
 
 // ----------------------------------------------------------------
@@ -31,7 +31,7 @@ func mergeJsonObjects(destination, source map[string]any) {
 		case map[string]any:
 			mergeJsonObjects(destination[srcKey].(map[string]any), srcVal.(map[string]any))
 		default:
-			globals.ExecContext.Logger.Debugf("invalid json type\n")
+			logger.Log.Debugf("invalid json type\n")
 		}
 	}
 }
@@ -62,7 +62,7 @@ func mergeJsonArray(destination, source []interface{}) {
 				mergeJsonObjects(destination[srcIndex].(map[string]any), srcVal.(map[string]any))
 			}
 		default:
-			globals.ExecContext.Logger.Debugf("invalid json type\n")
+			logger.Log.Debugf("invalid json type\n")
 		}
 	}
 }

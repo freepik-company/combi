@@ -1,49 +1,28 @@
 package globals
 
-import (
-	"context"
-	"time"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-)
+import "strings"
 
 var (
-	ExecContext = ExecutionContext{
-		Context: context.Background(),
-	}
+	TmpDir = ""
 )
 
-// ExecutionContext TODO
-type ExecutionContext struct {
-	Context context.Context
-	Logger  zap.SugaredLogger
+// CopyMap return a map that is a real copy of the original
+// Ref: https://go.dev/blog/maps
+func CopyMap(src map[string]interface{}) map[string]interface{} {
+	m := make(map[string]interface{}, len(src))
+	for k, v := range src {
+		m[k] = v
+	}
+	return m
 }
 
-// SetLogger TODO
-func SetLogger(logLevel string, disableTrace bool) (err error) {
-	parsedLogLevel, err := zap.ParseAtomicLevel(logLevel)
-	if err != nil {
-		return err
+// SplitCommaSeparatedValues get a list of strings and return a new list
+// where each element containing commas is divided in separated elements
+func SplitCommaSeparatedValues(input []string) []string {
+	var result []string
+	for _, item := range input {
+		parts := strings.Split(item, ",")
+		result = append(result, parts...)
 	}
-
-	// Initialize the logger
-	loggerConfig := zap.NewProductionConfig()
-	if disableTrace {
-		loggerConfig.DisableStacktrace = true
-		loggerConfig.DisableCaller = true
-	}
-
-	loggerConfig.EncoderConfig.TimeKey = "timestamp"
-	loggerConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
-	loggerConfig.Level.SetLevel(parsedLogLevel.Level())
-
-	// Configure the logger
-	logger, err := loggerConfig.Build()
-	if err != nil {
-		return err
-	}
-
-	ExecContext.Logger = *logger.Sugar()
-	return nil
+	return result
 }

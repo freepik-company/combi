@@ -10,14 +10,10 @@ global:
       branch: ""
       filepath: ""
     kubernetes:
-      configMapRef:
-        namespace: ""
-        name: ""
-        key: ""
-      secretRef:
-        namespace: ""
-        name: ""
-        key: ""
+      kind: "" # ConfigMap|Secret
+      namespace: ""
+      name: ""
+      key: ""
 
   conditions:
     mandatory: []
@@ -28,23 +24,6 @@ global:
 configs:
   example1:
     mergedConfig: "" # path to the result file with the merged config
-    target: # target config to merge the sources configs
-      raw: ""
-      filepath: ""
-      git:
-        sshUrl: ""
-        sshKeyFilepath: ""
-        branch: ""
-        filepath: ""
-      kubernetes:
-        configMapRef:
-          namespace: ""
-          name: ""
-          key: ""
-        secretRef:
-          namespace: ""
-          name: ""
-          key: ""
     source:  # source config to merge in target file
       raw: ""
       filepath: ""
