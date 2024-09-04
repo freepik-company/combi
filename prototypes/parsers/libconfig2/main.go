@@ -13,37 +13,37 @@ import (
 	"github.com/alecthomas/repr"
 )
 
-type Libconfig2T struct {
-	ConfigStruct SettingListT
+type LibconfigT struct {
+	ConfigStruct []SettingT
 	configMap    map[string]any
 }
 
-type SettingListT struct {
-	PrimitiveList []Primitive2T
-	ArrayList     []Array2T
-	GroupList     []Group2T
-}
-
-type Array2T struct {
-	Values []string
-}
-
-type Group2T struct {
-	Values []string
-}
-
-type Primitive2T struct {
+type SettingT struct {
 	Name  string
-	Value string
+	Value SettingValueT
+}
+
+type SettingValueT struct {
+	Primitive string
+	Array     []string
+	// Group     GroupT
+	Group []SettingT
+	List  ListT
+}
+
+type GroupT struct {
+}
+
+type ListT struct {
 }
 
 // ----------------------------------------------------------------
-// Decode/Encode NGINX data structure
+// Decode/Encode LIBCONFIG data structure
 // ----------------------------------------------------------------
 
 // Decode functions
 
-func (e *Libconfig2T) DecodeConfig(filepath string) (err error) {
+func (e *LibconfigT) DecodeConfig(filepath string) (err error) {
 	configBytes, err := os.ReadFile(filepath)
 	if err != nil {
 		return err
@@ -53,31 +53,12 @@ func (e *Libconfig2T) DecodeConfig(filepath string) (err error) {
 	return err
 }
 
-func (e *Libconfig2T) DecodeConfigBytes(configBytes []byte) (err error) {
+func (e *LibconfigT) DecodeConfigBytes(configBytes []byte) (err error) {
 	// Remove one line comments in file
 	configStr := string(configBytes)
 	configStr = regexp.MustCompile(`#[^\n]*`).ReplaceAllString(configStr, "")
-	configStr = regexp.MustCompile(`[\s]*[=:][\s]*`).ReplaceAllStringFunc(configStr, func(match string) string {
-		result := "="
-		if strings.Contains(match, ":") {
-			result = ":"
-		}
-		return result
-	})
 
-	// Parse formatted nginx configuration
-	// configStrLines := strings.Split(configStr, "\n")
-
-	// configStrLines = slices.DeleteFunc(configStrLines, func(str string) bool {
-	// 	return str == ""
-	// })
-
-	// repr.Println(configStrLines, repr.Indent("  "), repr.OmitEmpty(true))
-	// fmt.Println(configStr)
-	fmt.Println("------------------------------------------------------------")
-	e.configMap = map[string]any{}
-	e.parseString(configStr)
-	// err = parseNginxBlockContent(&e.ConfigStruct, configStrLines)
+	err = e.parseLibconfigString(configStr)
 	return err
 }
 
@@ -85,180 +66,271 @@ func isWhitespace(b byte) bool {
 	return slices.Contains([]byte{'\n', '\t', '\r', ' '}, b)
 }
 
-func isScope(b byte) bool {
-	return slices.Contains([]byte{'{', '(', '[', ']', ')', '}'}, b)
+func isOpenScope(b byte) bool {
+	return slices.Contains([]byte{'{', '(', '['}, b)
 }
 
-func isCloseValueChar(b byte) bool {
+func isCloseScope(b byte) bool {
+	return slices.Contains([]byte{']', ')', '}'}, b)
+}
+
+func isCloseValue(b byte) bool {
 	return slices.Contains([]byte{',', ';'}, b)
 }
 
-func (e *Libconfig2T) parseString(config string) {
+func isEqual(b byte) bool {
+	return slices.Contains([]byte{'=', ':'}, b)
+}
+
+func (e *LibconfigT) parseLibconfigString(config string) (err error) {
+	e.configMap, err = parseSettings(config)
+	repr.Println(e.configMap, repr.Indent("  "), repr.OmitEmpty(true))
+	return err
+}
+
+func parseSettings(config string) (settings map[string]any, err error) {
+	settings = map[string]any{}
+
 	configLen := len(config)
 	for i := 0; i < configLen; i++ {
-		if isWhitespace(config[i]) || isCloseValueChar(config[i]) {
-			continue
+		spacesDiff := skipParseSpaces(config[i:])
+		i += spacesDiff
+		if i >= configLen {
+			break
 		}
 
 		// parse name
 		name, nameDiff := parseSettingName(config[i:])
-		e.configMap[name] = nil
-		fmt.Printf("setting name: '%s'; start: %d; end: %d\n", name, i, i+nameDiff)
+		settings[name] = nil
 		i += nameDiff
+		if i >= configLen {
+			break
+		}
 
-		// parse primitive value
-		if !isScope(config[i]) {
-			value, valueDiff := parseSettingPrimitiveValue(config[i:])
-			e.configMap[name] = value
-			fmt.Printf("setting value '%s'; start: %d; end: %d\n", value, i, i+valueDiff)
-			i += valueDiff
+		spacesDiff = skipParseSpaces(config[i:])
+		i += spacesDiff
+		if i >= configLen {
+			break
+		}
+
+		// parse value
+		value, valueDiff, err := parseSettingValue(config[i:])
+		if err != nil {
+			return settings, err
+		}
+
+		settings[name] = value
+		i += valueDiff
+		if i >= configLen {
+			break
+		}
+
+		spacesDiff = skipParseSpaces(config[i:])
+		i += spacesDiff
+		if i >= configLen {
+			break
+		}
+
+		if isCloseValue(config[i]) && i+1 < configLen {
+			i++
+		}
+	}
+
+	return settings, err
+}
+
+func parseSettingValue(config string) (value any, diff int, err error) {
+	switch config[0] {
+	case '[':
+		value, diff, err = parseSettingValueArray(config)
+	case '{':
+		value, diff, err = parseSettingValueGroup(config)
+	case '(':
+		value, diff, err = parseSettingValueList(config)
+	default:
+		value, diff = parseSettingValuePrimitive(config)
+	}
+
+	return value, diff, err
+}
+
+func skipParseSpaces(config string) (diff int) {
+	for diff = 0; diff < len(config) && isWhitespace(config[diff]); diff++ {
+	}
+	if diff > 0 {
+		diff--
+	}
+
+	return diff
+}
+
+func parseSettingName(config string) (name string, diff int) {
+	configLen := len(config)
+	for diff = 0; diff < configLen; diff++ {
+		if isEqual(config[diff]) || isWhitespace(config[diff]) {
+			break
+		}
+	}
+	name = config[:diff]
+
+	config = config[diff:]
+	configLen = len(config)
+	for i := 0; i < configLen; i++ {
+		if isEqual(config[i]) {
+			diff += i + 1
+			break
+		}
+	}
+
+	return name, diff
+}
+
+func parseSettingValuePrimitive(config string) (value string, diff int) {
+	configLen := len(config)
+	if config[0] == '"' {
+		for diff := 1; diff < configLen; diff++ {
+			if config[diff] == '"' && config[diff-1] != '\\' {
+				diff++
+				value = config[:diff]
+				return value, diff
+			}
+		}
+	}
+
+	for diff := 1; diff < configLen; diff++ {
+		if isWhitespace(config[diff]) || isCloseValue(config[diff]) || isCloseScope(config[diff]) {
+			value = config[:diff]
+			return value, diff
+		}
+	}
+
+	return value, diff
+}
+
+func parseSettingValueArray(config string) (value []string, diff int, err error) {
+	configLen := len(config)
+	count := 1
+	for diff = 1; diff < configLen; diff++ {
+		if config[diff] == '[' {
+			count++
+		}
+
+		if config[diff] == ']' {
+			count--
+			if count <= 0 {
+				diff++
+				break
+			}
+		}
+
+	}
+
+	if count > 0 {
+		err = fmt.Errorf("unclose array")
+		return value, diff, err
+	}
+
+	arrayConfigStr := regexp.MustCompile(`[\s]`).ReplaceAllString(config[:diff], "")
+	arrayConfigStrLen := len(arrayConfigStr)
+	for i := 0; i < arrayConfigStrLen; i++ {
+		if isCloseValue(arrayConfigStr[i]) || isOpenScope(arrayConfigStr[i]) || isWhitespace(arrayConfigStr[i]) {
 			continue
 		}
 
-		// parse primitive value
-
-		break
-
-	}
-
-	fmt.Println("------------------------------------------------------------")
-}
-
-func parseSettingName(config string) (value string, diff int) {
-	configLen := len(config)
-	index := 0
-	diff = index + 1
-	found := false
-	for ; diff < configLen && !found; diff++ {
-		if config[diff] == '=' {
-			found = true
+		if i >= arrayConfigStrLen {
+			break
+		}
+		primitive, pDiff := parseSettingValuePrimitive(arrayConfigStr[i:])
+		value = append(value, primitive)
+		i += pDiff
+		if i >= arrayConfigStrLen {
+			break
 		}
 	}
-	value = config[index : diff-1]
-	return value, diff
+
+	return value, diff, err
 }
 
-func parseSettingPrimitiveValue(config string) (value string, diff int) {
+func parseSettingValueGroup(config string) (groupSettings map[string]any, diff int, err error) {
 	configLen := len(config)
-	index := 0
-	diff = index + 1
-	found := false
-	if config[index] == '"' {
-		for ; diff < configLen && !found; diff++ {
-			if config[diff] == '"' && config[diff-1] != '\\' {
-				found = true
+	count := 1
+	for diff = 1; diff < configLen; diff++ {
+		if config[diff] == '{' {
+			count++
+		}
+
+		if config[diff] == '}' {
+			count--
+			if count <= 0 {
+				// diff++
+				break
 			}
 		}
-		value = config[index:diff]
-		return value, diff
 	}
 
-	for ; diff < configLen && !found; diff++ {
-		if isWhitespace(config[diff]) || isCloseValueChar(config[diff]) {
-			found = true
-		}
+	if count > 0 {
+		err = fmt.Errorf("unclose group")
+		return groupSettings, diff, err
 	}
-	value = config[index : diff-1]
 
-	return value, diff
+	groupStr := strings.TrimSuffix(strings.TrimPrefix(config[:diff], "{"), "}")
+	fmt.Println("--------------------------------------------------------------------")
+	fmt.Println("group:", groupStr)
+	fmt.Println("--------------------------------------------------------------------")
+	groupSettings, err = parseSettings(groupStr)
+
+	return groupSettings, diff, err
 }
 
-// func parseNginxBlockContent(blockContent *BlockContentT, blockContentLines []string) (err error) {
-// 	// Parse block content
-// 	for blockLineIndex := 0; blockLineIndex < len(blockContentLines); blockLineIndex++ {
-// 		line := strings.TrimSpace(blockContentLines[blockLineIndex])
-// 		// Skip empty strings (only to be carefull)
-// 		if len(line) == 0 {
-// 			continue
-// 		}
+func parseSettingValueList(config string) (valueList []any, diff int, err error) {
+	configLen := len(config)
+	count := 1
+	for diff = 1; diff < configLen && count <= 0; diff++ {
+		if config[diff] == '(' {
+			count++
+		}
 
-// 		// Parse nginx directives
-// 		if strings.HasSuffix(line, ";") {
-// 			directiveParts := strings.Fields(line)
-// 			subDirective := DirectiveT{
-// 				Name:  directiveParts[0],
-// 				Value: strings.Join(directiveParts[1:len(directiveParts)-1], " "),
-// 			}
-// 			if len(directiveParts) > 3 {
-// 				subDirective.Param = directiveParts[1]
-// 				subDirective.Value = strings.Join(directiveParts[2:len(directiveParts)-1], " ")
-// 			}
-// 			blockContent.Directives = append(blockContent.Directives, subDirective)
-// 		}
+		if config[diff] == ')' {
+			count--
+		}
+	}
 
-// 		// Parse ngix blocks
-// 		if strings.HasSuffix(line, "{") {
-// 			startBlockLines := blockContentLines[blockLineIndex:]
-// 			i, open := 0, 0
-// 			for ; i < len(startBlockLines); i++ {
-// 				if strings.HasSuffix(startBlockLines[i], "{") {
-// 					open += 1
-// 				}
-// 				if strings.HasSuffix(startBlockLines[i], "}") {
-// 					open -= 1
-// 				}
-// 				if open <= 0 {
-// 					break
-// 				}
-// 			}
-// 			if open > 0 {
-// 				err = fmt.Errorf("nginx block '%s' without closed bracket '}'", blockContentLines[blockLineIndex])
-// 				return err
-// 			}
-// 			subBlock, err := parseNginxBlock(blockContentLines[blockLineIndex : blockLineIndex+i+1])
-// 			if err != nil {
-// 				return err
-// 			}
-// 			blockContent.Blocks = append(blockContent.Blocks, subBlock)
-// 			blockLineIndex += i
-// 			continue
-// 		}
+	if count > 0 {
+		err = fmt.Errorf("unclose list")
+		return valueList, diff, err
+	}
 
-// 		if strings.HasSuffix(line, "}") {
-// 			err = fmt.Errorf("over closed bracket '}' in nginx configuration")
-// 			return err
-// 		}
-// 	}
+	listConfigStr := strings.TrimSuffix(strings.TrimPrefix(config[:diff], "("), ")")
 
-// 	return err
-// }
+	listConfigLen := len(listConfigStr)
+	for i := 0; i < listConfigLen; i++ {
+		spacesDiff := skipParseSpaces(listConfigStr[i:])
+		i += spacesDiff
+		if i >= listConfigLen {
+			break
+		}
 
-// func parseNginxBlock(blockLines []string) (block BlockT, err error) {
-// 	// Parse name and parameters
-// 	nameParamsParts := strings.Fields(blockLines[0])
-// 	block.Name = nameParamsParts[0]
-// 	block.Params = strings.Join(nameParamsParts[1:len(nameParamsParts)-1], " ")
+		var value any
+		var valueDiff int
+		value, valueDiff, err = parseSettingValue(listConfigStr[i:])
+		if err != nil {
+			return valueList, diff, err
+		}
+		valueList = append(valueList, value)
+		i += valueDiff
+		if i >= listConfigLen {
+			break
+		}
 
-// 	// Parse block content
-// 	err = parseNginxBlockContent(&block.BlockContent, blockLines[1:len(blockLines)-1])
-// 	return block, err
-// }
+		spacesDiff = skipParseSpaces(listConfigStr[i:])
+		i += spacesDiff
+		if i >= listConfigLen {
+			break
+		}
+	}
 
-// // Encode functions
-
-// func (e *NginxT) EncodeConfigString() (configStr string) {
-// 	configStr = encodeNginxBlockContent(e.ConfigStruct, 0)
-// 	return configStr
-// }
-
-// func encodeNginxBlockContent(blockContent BlockContentT, indent int) (configStr string) {
-// 	indentStr := ""
-// 	for i := 0; i < indent; i++ {
-// 		indentStr += "    "
-// 	}
-
-// 	for _, val := range blockContent.Directives {
-// 		configStr += indentStr + val.Name + " " + val.Param + " " + val.Value + ";\n"
-// 	}
-
-// 	for _, val := range blockContent.Blocks {
-// 		configStr += indentStr + val.Name + " " + val.Params + " {\n"
-// 		configStr += encodeNginxBlockContent(val.BlockContent, indent+1)
-// 		configStr += indentStr + "}\n"
-// 	}
-
-// 	return configStr
-// }
+	return valueList, diff, err
+}
 
 func main() {
 	globals.InitLogger(globals.DEBUG, nil)
@@ -266,19 +338,13 @@ func main() {
 	if len(os.Args) < 2 {
 		globals.Logger.Fatalf("file as argument not provided (usage: %s <filepath>)", program)
 	}
-
 	filepath := os.Args[1]
-	// libconfigConfigBytes, err := os.ReadFile(filepath)
-	// if err != nil {
-	// 	globals.Logger.Fatalf("unable to read file %s: %s", filepath, err.Error())
-	// }
 
 	// ----------------------------------------------------------------
 	// LIBCONFIG file parser
 	// ----------------------------------------------------------------
-	libconfig := Libconfig2T{}
+	libconfig := LibconfigT{}
 	err := libconfig.DecodeConfig(filepath)
-	repr.Println(libconfig.ConfigStruct, repr.Indent("  "), repr.OmitEmpty(true))
 	if err != nil {
 		globals.Logger.Fatalf("unable to parse file %s: %s", filepath, err.Error())
 	}
