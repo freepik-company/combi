@@ -88,6 +88,10 @@ Current configuration version: `v1alpha2`
 | `command`  | `[]`    | string list with the command and his argument to execute |
 | `script`   | `""`    | string with a script that combi generate to execute |
 
+> **WARNING**
+>
+> The list of actions are commands that are executed on the machine after checking the conditions. Please be careful.
+
 ### Sources
 
 You can consume the configuration from different sources.

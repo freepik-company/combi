@@ -2,6 +2,7 @@
 kind: "" # nginx|json|libconfig
 global:
   source:
+    type: "" # raw|file|git|kubernetes
     raw: ""
     filepath: ""
     git:
@@ -21,43 +22,47 @@ global:
   actions:
     onSuccess: []
     onFailure: []
-configs:
-  example1:
-    mergedConfig: "" # path to the result file with the merged config
-    source:  # source config to merge in target file
-      raw: ""
+config:
+  mergedConfig: "" # path to the result file with the merged config
+  source:  # source config to merge in target file
+    type: "" # raw|file|git|kubernetes
+    raw: ""
+    filepath: ""
+    git:
+      sshUrl: ""
+      sshKeyFilepath: ""
+      branch: ""
       filepath: ""
-      git:
-        sshUrl: ""
-        sshKeyFilepath: ""
-        branch: ""
-        filepath: ""
-      kubernetes:
-        configMapRef:
-          namespace: ""
-          name: ""
-          key: ""
-        secretRef:
-          namespace: ""
-          name: ""
-          key: ""
+    kubernetes:
+      configMapRef:
+        namespace: ""
+        name: ""
+        key: ""
+      secretRef:
+        namespace: ""
+        name: ""
+        key: ""
 
-    conditions:
-      mandatory: []
-      # - name: ""
-      #   template: ""
-      #   value: ""
-      optional: []
-      # - name: ""
-      #   template: ""
-      #   value: ""
+  conditions:
+    mandatory: []
+    # mandatory:
+    # - name: ""
+    #   template: ""
+    #   value: ""
+    # optional: []
+    # optional:
+    # - name: ""
+    #   template: ""
+    #   value: ""
 
-    actions:
-      onSuccess: []
-      # - name: ""
-      #   command: []
-      #   script: ""
-      onFailure: []
-      # - name: ""
-      #   command: []
-      #   script: ""
+  actions:
+    onSuccess: []
+    # onSuccess:
+    # - name: ""
+    #   command: []
+    #   script: ""
+    onFailure: []
+    # onFailure:
+    # - name: ""
+    #   command: []
+    #   script: ""
