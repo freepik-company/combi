@@ -29,6 +29,7 @@ COPY --from=builder /workspace/combi .
 RUN apt update && \
     apt install --yes openssh-client && \
     mkdir -p ~/.ssh && \
-    ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+    ssh-keyscan -H github.com >> ~/.ssh/known_hosts && \
+    echo 'export SSH_KNOWN_HOSTS=~/.ssh/known_hosts' >> ~/.bashrc
 
 ENTRYPOINT ["/combi"]

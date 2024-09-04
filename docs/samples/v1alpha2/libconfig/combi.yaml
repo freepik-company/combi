@@ -39,12 +39,17 @@ global:
 config:
   mergedConfig: ./docs/samples/v1alpha2/libconfig/merged.cnf
   source:
-    type: raw
+    type: kubernetes
     git:
       sshUrl: "git@github.com:freepik-company/combi.git"
       sshKeyFilepath: "/path/to/private_key"
       branch: "main"
       filepath: "docs/samples/v1alpha2/libconfig/source.cnf"
+    kubernetes:
+      kind: ConfigMap
+      namespace: default
+      name: source
+      key: config.cnf
     rawConfig: |
       datadir="/var/lib/proxysql"
 
@@ -55,40 +60,40 @@ config:
       }
 
   conditions:
-    mandatory: []
-    optional: []
-  #   mandatory:
-  #   - name: "search primitive value to check condition"
-  #     template: |
-  #       {{- $config := . -}}
-  #       {{- printf "%s" $config.int64field -}}
-  #     value: "500L"
-  #   - name: "search group value to check condition"
-  #     template: |
-  #       {{- $config := . -}}
-  #       {{- printf "%s" $config.mysql_variables.threads -}}
-  #     value: "2"
-  #   - name: "search list value to check condition"
-  #     template: |
-  #       {{- $config := . -}}
-  #         {{- range $i, $v := $config.mysql_servers -}}
-  #             {{- if (eq $v.hostgroup "0" ) -}}
-  #               {{- printf "%s" $v.max_connections -}}
-  #             {{- end -}}
-  #         {{- end -}}
-  #     value: "1000"
-  #   - name: "search env variable to check condition"
-  #     template: |
-  #       {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
-  #     value: "true"
-  #   optional:
-  #   - name: "print array values condition"
-  #     template: |
-  #       {{- $config := . -}}
-  #       {{- range $k, $v := $config.array_test -}}
-  #         [{{- printf "%v" $k -}}] => {{- printf "%v, " $v -}}
-  #       {{- end -}}
-  #     value: ""
+    # mandatory: []
+    mandatory:
+    - name: "search primitive value to check condition"
+      template: |
+        {{- $config := . -}}
+        {{- printf "%s" $config.int64field -}}
+      value: "500L"
+    - name: "search group value to check condition"
+      template: |
+        {{- $config := . -}}
+        {{- printf "%s" $config.mysql_variables.threads -}}
+      value: "2"
+    - name: "search list value to check condition"
+      template: |
+        {{- $config := . -}}
+          {{- range $i, $v := $config.mysql_servers -}}
+              {{- if (eq $v.hostgroup "0" ) -}}
+                {{- printf "%s" $v.max_connections -}}
+              {{- end -}}
+          {{- end -}}
+      value: "1000"
+    - name: "search env variable to check condition"
+      template: |
+        {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
+      value: "true"
+    # optional: []
+    optional:
+    - name: "print array values condition"
+      template: |
+        {{- $config := . -}}
+        {{- range $k, $v := $config.array_test -}}
+          [{{- printf "%v" $k -}}] => {{- printf "%v, " $v -}}
+        {{- end -}}
+      value: ""
 
   actions:
     onSuccess:

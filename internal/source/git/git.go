@@ -28,7 +28,7 @@ type GitSourceT struct {
 	RepoBranch     string
 }
 
-func (s *GitSourceT) Init(source v1alpha2.SourceT) {
+func (s *GitSourceT) Init(source v1alpha2.SourceT) (err error) {
 	s.RepoSshUrl = source.Git.SshUrl
 	s.RepoBranch = source.Git.Branch
 
@@ -37,6 +37,8 @@ func (s *GitSourceT) Init(source v1alpha2.SourceT) {
 
 	s.ConfigFilepath = fmt.Sprintf("%s/%s", s.RepoPath, source.Git.Filepath)
 	s.SshKeyFilepath = source.Git.SshKeyFilepath
+
+	return err
 }
 
 func (s *GitSourceT) GetConfig() (config []byte, updated bool, err error) {

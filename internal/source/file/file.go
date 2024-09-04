@@ -11,8 +11,9 @@ type FileSourceT struct {
 	StoredConfig   []byte
 }
 
-func (s *FileSourceT) Init(source v1alpha2.SourceT) {
+func (s *FileSourceT) Init(source v1alpha2.SourceT) (err error) {
 	s.ConfigFilepath = source.Filepath
+	return err
 }
 
 func (s *FileSourceT) GetConfig() (config []byte, updated bool, err error) {

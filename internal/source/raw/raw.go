@@ -11,8 +11,9 @@ type RawSourceT struct {
 	StoredConfig []byte
 }
 
-func (s *RawSourceT) Init(source v1alpha2.SourceT) {
+func (s *RawSourceT) Init(source v1alpha2.SourceT) (err error) {
 	s.RawConfig = source.RawConfig
+	return err
 }
 
 func (s *RawSourceT) GetConfig() (config []byte, updated bool, err error) {

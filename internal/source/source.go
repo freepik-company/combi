@@ -9,7 +9,7 @@ import (
 )
 
 type SourceT interface {
-	Init(source v1alpha2.SourceT)
+	Init(source v1alpha2.SourceT) (err error)
 	GetConfig() (config []byte, updated bool, err error)
 }
 
