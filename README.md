@@ -5,8 +5,6 @@
 ![GitHub License](https://img.shields.io/github/license/freepik-company/combi)
 
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/freepik-company/combi/total)
-![GitHub forks](https://img.shields.io/github/forks/freepik-company/combi)
-![GitHub Repo stars](https://img.shields.io/github/stars/freepik-company/combi)
 
 ![GitHub User's stars](https://img.shields.io/github/stars/sebastocorp)
 ![GitHub followers](https://img.shields.io/github/followers/sebastocorp)
@@ -36,29 +34,16 @@ Thinking about these problems and possible solutions, we have decided to create 
 | Name                  | Command  | Default                              | Description |
 |:---                   |:---      |:---                                  |:---         |
 | `log-level`           | `daemon` | `info`                               | Verbosity level for logs |
-| `disable-trace`       | `daemon` | `true`                               | Disable showing traces in logs |
 | `tmp-dir`             | `daemon` | `/tmp/combi`                         | Temporary directoty to store temporary objects like remote repos, scripts, etc |
 | `sync-time`           | `daemon` | `15s`                                | Waiting time between source synchronizations (in duration type) |
-| `source-type`         | `daemon` | `git`                                | Source where consume the combi config |
-| `source-path`         | `daemon` | `config/combi.yaml`                  | Path in source where find combi config |
-| `source-field`        | `daemon` | `example1`                           | Field in combi config map to find the mergeble config |
-| `git-ssh-url`         | `daemon` | `git@github.com:example/project.git` | Git repository ssh url |
-| `git-sshkey-filepath` | `daemon` | `/home/example/.ssh/id_rsa_github`   | Ssh private key filepath for git repository |
-| `git-branch`          | `daemon` | `main`                               | Git branch repository |
 
 ## How to use
 
-This project provides the binary files in differents architectures to make it easy to use wherever wanted.
-
-> **IMPORTANT**
->
-> Why this project does not have a docker image?
->
-> The objective of this tool is work in the background updating the desired configuration of a different service that runs in the same instance (vm, container, etc), that is why the main command is called daemon, and its the reason there is not a docker image with this binary alone.
+This project provides the binary files and container image in differents architectures to make it easy to use wherever wanted.
 
 ### Configuration
 
-Current configuration version: `v1alpha1`
+Current configuration version: `v1alpha2`
 
 #### Root Parameters
 
@@ -70,7 +55,7 @@ Current configuration version: `v1alpha1`
 
 | Name                          | Default | Description |
 |:---                           |:---     |:---         |
-| `global.rawConfig`            | `""`    | config specification to merge in `targetConfig` |
+| `config.source`               | `""`    | source with the configuration to merge in the `mergedConfig` file |
 | `global.conditions.mandatory` | `[]`    | list of mandatory conditions that `mergedConfig` have to achive |
 | `global.conditions.optional`  | `[]`    | list of optional conditions that `mergedConfig` have to check |
 | `global.actions.onSuccess`    | `[]`    | list of actions that `combi` has to execute in case of mandatory conditions success |
@@ -80,14 +65,12 @@ Current configuration version: `v1alpha1`
 
 | Name                                        | Default | Description |
 |:---                                         |:---     |:---         |
-| `configs`                                   | `{}`    | map with the different configuration to manage |
-| `configs.<config-key>.targetConfig`         | `""`    | configuration filepath to merge the `global.rawConfig` and `configs.<config-key>.rawConfig` |
-| `configs.<config-key>.mergedConfig`         | `""`    | filepath to create the configuration file after the merge and conditions |
-| `configs.<config-key>.rawConfig`            | `""`    | string with the configuration to merge in the `targetConfig` |
-| `configs.<config-key>.conditions.mandatory` | `[]`    | list of specific mandatory conditions |
-| `configs.<config-key>.conditions.optional`  | `[]`    | list of specific optional conditions |
-| `configs.<config-key>.actions.onSuccess`    | `[]`    | list of specific success actions |
-| `configs.<config-key>.actions.onFailure`    | `[]`    | list of specific fail actions |
+| `config.mergedConfig`         | `""`    | filepath to create the configuration file after the merge and conditions |
+| `config.source`               | `""`    | source with the configuration to merge in the `mergedConfig` file |
+| `config.conditions.mandatory` | `[]`    | list of mandatory conditions that `mergedConfig` have to achive |
+| `config.conditions.optional`  | `[]`    | list of optional conditions that `mergedConfig` have to check |
+| `config.actions.onSuccess`    | `[]`    | list of actions that `combi` has to execute in case of mandatory conditions success |
+| `config.actions.onFailure`    | `[]`    | list of actions that `combi` has to execute in case of mandatory conditions fail |
 
 #### Condition List Item Parameters
 
@@ -107,12 +90,23 @@ Current configuration version: `v1alpha1`
 
 ### Sources
 
-You can consume the combi configuration from different sources.
+You can consume the configuration from different sources.
 
 | Name    | Description |
 |:---     |:---         |
-| `local` | combi consumes his configuration from local file in the system |
-| `git`   | combi consumes his configuration from file in a remote repository |
+| `config.source.type`                 | type of the source to define where consume the configuration (`raw`, `filepath`, `git` y `kubernetes`) |
+| `config.source.raw`                  | direct configuration string to merge |
+| `config.source.filepath`             | file with the configuration to merge |
+| `config.source.git`                  | git repository to find the file with the configuration to merge |
+| `config.source.git.sshUrl`           | ssh url of the git repository |
+| `config.source.git.sshKeyFilepath`   | ssh private key file to use in git clone |
+| `config.source.git.branch`           | branch of the git repository |
+| `config.source.git.filepath`         | filepath inside of repository of the config file |
+| `config.source.kubernetes`           | kubernetes resource `ConfigMap` or `Secret` with the configuration to merge |
+| `config.source.kubernetes.kind`      | kind of the resource (`ConfigMap` or `Secret`) |
+| `config.source.kubernetes.namespace` | namespace of the resource |
+| `config.source.kubernetes.name`      | name of the resource |
+| `config.source.kubernetes.key`       | key inside of the resource to find the configuration to merge |
 
 ## How does it work?
 
@@ -179,12 +173,8 @@ To consume a configuration in a git repository (with specific branch) and merge 
 ```sh
 combi daemon \
     --sync-time=20s \
-    --source-type=git \
-    --source-path=path/to/combi/config.yaml \
-    --source-field=example1 \
-    --git-ssh-url=git@github.com:youraccount/yourrepo.git \
-    --git-sshkey-filepath=/path/to/sshkey \
-    --git-branch=branch-name
+    --tmp-dir=/tmp/combi \
+    --config=/config/combi.yaml
 ```
 
 The combi config.yaml:
@@ -193,7 +183,19 @@ The combi config.yaml:
 # combi configuration file
 kind: libconfig
 global:
-  rawConfig: ""
+  source:
+    type: raw
+    raw: |
+      int32field=2
+      int64field=500L
+
+      string_example="some-value"
+
+      group_example=
+      {
+        admin_credentials="root:pass"
+        addr="0.0.0.0:6032"
+      }
   conditions:
     mandatory: []
     optional: []
@@ -201,10 +203,10 @@ global:
     onSuccess: []
     onFailure: []
 configs:
-  example1:
-    targetConfig: ./path/to/local/libconfig.cnf
-    mergedConfig: ./path/to/merged/libconfig.cnf
-    rawConfig: |
+  mergedConfig: ./path/to/merged/libconfig.cnf
+  source:
+    type: raw
+    raw: |
       mysql_variables=
       {
         threads=2
@@ -223,61 +225,46 @@ configs:
         { username = "reader" , password = "pass" , default_hostgroup = 1 , active = 1 },
       )
 
-    conditions:
-      mandatory:
-      - name: "search primitive value to check condition"
-        template: |
-          {{- $config := . -}}
-          {{- printf "%s" $config.int64field -}}
-        value: "500L"
-      - name: "search group value to check condition"
-        template: |
-          {{- $config := . -}}
-          {{- printf "%s" $config.mysql_variables.threads -}}
-        value: "2"
-      - name: "search list value to check condition"
-        template: |
-          {{- $config := . -}}
-            {{- range $i, $v := $config.mysql_servers -}}
-                {{- if (eq $v.hostgroup "0" ) -}}
-                  {{- printf "%s" $v.max_connections -}}
-                {{- end -}}
-            {{- end -}}
-        value: "1000"
-      - name: "search env variable to check condition"
-        template: |
-          {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
-        value: "true"
-      optional: []
+  conditions:
+    mandatory:
+    - name: "search primitive value to check condition"
+      template: |
+        {{- $config := . -}}
+        {{- printf "%s" $config.int64field -}}
+      value: "500L"
+    - name: "search group value to check condition"
+      template: |
+        {{- $config := . -}}
+        {{- printf "%s" $config.mysql_variables.threads -}}
+      value: "2"
+    - name: "search list value to check condition"
+      template: |
+        {{- $config := . -}}
+          {{- range $i, $v := $config.mysql_servers -}}
+              {{- if (eq $v.hostgroup "0" ) -}}
+                {{- printf "%s" $v.max_connections -}}
+              {{- end -}}
+          {{- end -}}
+      value: "1000"
+    - name: "search env variable to check condition"
+      template: |
+        {{- printf "%s" (env "MANDATORY_ENV_VAR") -}}
+      value: "true"
+    optional: []
 
-    actions:
-      onSuccess:
-      - name: "execute success message config action"
-        command:
-        - echo
-        - -e
-        - "success in config for you\n"
-      onFailure:
-      - name: "execute success message config action"
-        command:
-        - echo
-        - -e
-        - "fail in config for you\n"
-```
-
-Local configuration file:
-
-```libconfig
-int32field=2
-int64field=500L
-
-string_example="some-value"
-
-group_example=
-{
-  admin_credentials="root:pass"
-  addr="0.0.0.0:6032"
-}
+  actions:
+    onSuccess:
+    - name: "execute success message config action"
+      command:
+      - echo
+      - -e
+      - "success in config for you\n"
+    onFailure:
+    - name: "execute success message config action"
+      command:
+      - echo
+      - -e
+      - "fail in config for you\n"
 ```
 
 ## Supported configuration formats

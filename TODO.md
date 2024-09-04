@@ -4,9 +4,7 @@
 ## Features
 
 - [ ] Add patch system post merge
-- [ ] Consume combi config from k8s ConfigMap/Secrets
-- [ ] Consume target config from git repository file ConfigMap/Secrets
-- [ ] Consume target config from ConfigMap/Secrets field
+- [x] Consume combi config from k8s ConfigMap/Secrets
 
 ## Supports
 
@@ -17,8 +15,8 @@
 
 ## Code
 
-- [ ] Change merge order beetween global and specific configs
-- [ ] Add source and target structure to consume configs from different sources
-- [ ] Add type DaemonT with attached flow functions
+- [x] Change merge order beetween global and specific configs
+- [x] Add source and target structure to consume configs from different sources
+- [x] Add type DaemonT with attached flow functions
 - [ ] Refactor the code to clean it and add comments
 - [ ] Change to custom parser in libconfig kind instead use library
