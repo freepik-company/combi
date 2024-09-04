@@ -2,23 +2,25 @@ package libconfig
 
 import (
 	"os"
+	"regexp"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
 const (
-	commentsRegex                    = `([#][^\n]*)|(\/\/[^\n]*)|(\/\*.*[\n]\*\/)`
 	escapeCharsRegex                 = `((=|:)|(;|,)|({|})|(\[|\])|(\(|\)))`
 	settingNameRegex                 = `[A-Za-z*][-A-Za-z0-9_*]*`
 	settingValuePrimitiveStringRegex = `(\"([^\"\\]|\\.)*\")`
 	settingValuePrimitiveFloatRegex  = `(([-+]?([0-9]*)?\.[0-9]*([eE][-+]?[0-9]+)?)|([-+]([0-9]+)(\.[0-9]*)?[eE][-+]?[0-9]+))`
 	settingValuePrimitiveHexRegex    = `(0[Xx][0-9A-Fa-f]+(L{1,2})?)`
 	settingValuePrimitiveIntRegex    = `([-+]?[0-9]+(L{1,2})?)`
+	settingValuePrimitiveBoolRegex   = `([tT]?[rR][uU]?[eE]?)`
 	settingValuePrimitiveRegex       = `(` +
 		settingValuePrimitiveStringRegex + `|` +
 		settingValuePrimitiveFloatRegex + `|` +
 		settingValuePrimitiveHexRegex + `|` +
+		settingValuePrimitiveBoolRegex + `|` +
 		settingValuePrimitiveIntRegex + `)`
 )
 
@@ -40,14 +42,14 @@ type SettingT struct {
 }
 
 type SettingValueT struct {
-	Primitive *PrimitiveT `parser:"( @@ (';'?','?)"`
+	Primitive *PrimitiveT `parser:"( @@ (';'?','?' '?)"`
 	Group     *GroupT     `parser:" | @@ (','?)"`
 	Array     *ArrayT     `parser:" | @@ (','?)"`
 	List      *ListT      `parser:" | @@ (','?))"`
 }
 
 type PrimitiveT struct {
-	Value string `parser:"@Value (','?)"`
+	Value string `parser:"@Value (','?';'?' '?)"`
 }
 
 type ArrayT struct {
@@ -74,17 +76,25 @@ func (e *LibconfigT) DecodeConfig(filepath string) (err error) {
 		return err
 	}
 
+	re := regexp.MustCompile(`#[^\n]*?`)
+	configBytes = re.ReplaceAll(configBytes, []byte(""))
+
 	err = e.DecodeConfigBytes(configBytes)
 	return err
 }
 
 func (e *LibconfigT) DecodeConfigBytes(configBytes []byte) (err error) {
+	re := regexp.MustCompile(`#[^\n]*?`)
+	configBytes = re.ReplaceAll(configBytes, []byte(""))
+
 	configLexer := lexer.MustSimple([]lexer.SimpleRule{
 		{Name: `Name`, Pattern: settingNameRegex},
-		{Name: `Value`, Pattern: settingValuePrimitiveRegex},
+		// {Name: `Value`, Pattern: settingValuePrimitiveRegex},
+		{Name: `Value`, Pattern: `([^{(=]([^\n\r\t ,;]*))`},
 		{Name: "EscapeChars", Pattern: escapeCharsRegex},
-		{Name: "Comments", Pattern: commentsRegex},
-		{Name: "whitespace", Pattern: `(\s+)`},
+		// {Name: "Whitespace", Pattern: `(\s+)`},
+		{Name: "EOL", Pattern: `[\n\r]+`},
+		{Name: "Whitespace", Pattern: `[ \t]+`},
 	})
 	configParser := participle.MustBuild[LIBCONFIG](
 		participle.Lexer(configLexer),
