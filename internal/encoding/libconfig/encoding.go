@@ -1,67 +1,13 @@
 package libconfig
 
 import (
+	"combi/internal/logger"
 	"os"
 	"regexp"
-
-	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/participle/v2/lexer"
-)
-
-const (
-	escapeCharsRegex                 = `((=|:)|(;|,)|({|})|(\[|\])|(\(|\)))`
-	settingNameRegex                 = `[A-Za-z*][-A-Za-z0-9_*]*`
-	settingValuePrimitiveStringRegex = `(\"([^\"\\]|\\.)*\")`
-	settingValuePrimitiveFloatRegex  = `(([-+]?([0-9]*)?\.[0-9]*([eE][-+]?[0-9]+)?)|([-+]([0-9]+)(\.[0-9]*)?[eE][-+]?[0-9]+))`
-	settingValuePrimitiveHexRegex    = `(0[Xx][0-9A-Fa-f]+(L{1,2})?)`
-	settingValuePrimitiveIntRegex    = `([-+]?[0-9]+(L{1,2})?)`
-	settingValuePrimitiveBoolRegex   = `([tT]?[rR][uU]?[eE]?)`
-	settingValuePrimitiveRegex       = `(` +
-		settingValuePrimitiveStringRegex + `|` +
-		settingValuePrimitiveFloatRegex + `|` +
-		settingValuePrimitiveHexRegex + `|` +
-		settingValuePrimitiveBoolRegex + `|` +
-		settingValuePrimitiveIntRegex + `)`
 )
 
 type LibconfigT struct {
-	ConfigStruct *LIBCONFIG
-}
-
-// ----------------------------------------------------------------
-// LIBCONFIG data structure
-// ----------------------------------------------------------------
-
-type LIBCONFIG struct {
-	Settings []*SettingT `parser:"@@*"`
-}
-
-type SettingT struct {
-	SetingName   string         `parser:"@Name ('='|':')"`
-	SettingValue *SettingValueT `parser:"@@"`
-}
-
-type SettingValueT struct {
-	Primitive *PrimitiveT `parser:"( @@ (';'?','?' '?)"`
-	Group     *GroupT     `parser:" | @@ (','?)"`
-	Array     *ArrayT     `parser:" | @@ (','?)"`
-	List      *ListT      `parser:" | @@ (','?))"`
-}
-
-type PrimitiveT struct {
-	Value string `parser:"@Value (','?';'?' '?)"`
-}
-
-type ArrayT struct {
-	Primitives []*PrimitiveT `parser:"'[' @@* ']'"`
-}
-
-type GroupT struct {
-	Settings []*SettingT `parser:"'{' @@* '}'"`
-}
-
-type ListT struct {
-	SettingValues []*SettingValueT `parser:"'(' @@* ')'"`
+	ConfigStruct map[string]any
 }
 
 // ----------------------------------------------------------------
@@ -76,137 +22,110 @@ func (e *LibconfigT) DecodeConfig(filepath string) (err error) {
 		return err
 	}
 
-	re := regexp.MustCompile(`#[^\n]*?`)
-	configBytes = re.ReplaceAll(configBytes, []byte(""))
+	configBytes = regexp.MustCompile(`#[^\n]*`).ReplaceAll(configBytes, []byte(""))
 
 	err = e.DecodeConfigBytes(configBytes)
 	return err
 }
 
 func (e *LibconfigT) DecodeConfigBytes(configBytes []byte) (err error) {
-	re := regexp.MustCompile(`#[^\n]*?`)
-	configBytes = re.ReplaceAll(configBytes, []byte(""))
+	configStr := string(configBytes)
+	configStr = regexp.MustCompile(`#[^\n]*`).ReplaceAllString(configStr, "")
 
-	configLexer := lexer.MustSimple([]lexer.SimpleRule{
-		{Name: `Name`, Pattern: settingNameRegex},
-		// {Name: `Value`, Pattern: settingValuePrimitiveRegex},
-		{Name: `Value`, Pattern: `([^{(=]([^\n\r\t ,;]*))`},
-		{Name: "EscapeChars", Pattern: escapeCharsRegex},
-		// {Name: "Whitespace", Pattern: `(\s+)`},
-		{Name: "EOL", Pattern: `[\n\r]+`},
-		{Name: "Whitespace", Pattern: `[ \t]+`},
-	})
-	configParser := participle.MustBuild[LIBCONFIG](
-		participle.Lexer(configLexer),
-	)
-
-	e.ConfigStruct, err = configParser.ParseBytes("", configBytes)
+	err = e.parseLibconfigString(configStr)
 	return err
 }
 
 // Encode functions
 
 func (e *LibconfigT) EncodeConfigString() (configStr string) {
-	configStr += encodeConfigSettingString(e.ConfigStruct.Settings, 0)
+	configStr += encodeConfigSettingString(e.ConfigStruct, 0)
 	return configStr
 }
 
-func encodeConfigSettingString(settings []*SettingT, indent int) (configStr string) {
+func encodeConfigSettingString(settings map[string]any, indent int) (configStr string) {
 	var indentStr string
 	for i := 0; i < indent; i++ {
 		indentStr += "  "
 	}
 
 	// Encode settings with primitive
-	for _, setting := range settings {
-		if setting.SettingValue.Primitive != nil {
-			configStr += indentStr + setting.SetingName + "=" + setting.SettingValue.Primitive.Value + ",\n"
-		}
-	}
-
-	// Encode settings with Array
-	for _, setting := range settings {
-		if setting.SettingValue.Array != nil {
-			configStr += setting.SetingName + "=" + "\n"
-			configStr += encodeConfigArrayString(setting.SettingValue.Array, indent)
+	for name, value := range settings {
+		switch value.(type) {
+		case string:
+			configStr += indentStr + name + "=" + value.(string) + ",\n"
+		case []string:
+			configStr += indentStr + name + "=" + "\n"
+			configStr += encodeConfigArrayString(value.([]string), indent)
 			configStr += ",\n"
-		}
-	}
-
-	// Encode settings with Group
-	for _, setting := range settings {
-		if setting.SettingValue.Group != nil {
-			configStr += setting.SetingName + "=" + "\n"
-			configStr += encodeConfigGroupString(setting.SettingValue.Group, indent)
+		case []any:
+			configStr += indentStr + name + "=" + "\n"
+			configStr += encodeConfigListString(value.([]any), indent)
 			configStr += ",\n"
-		}
-	}
-
-	// Encode settings with List
-	for _, setting := range settings {
-		if setting.SettingValue.List != nil {
-			configStr += setting.SetingName + "=" + "\n"
-			configStr += encodeConfigListString(setting.SettingValue.List, indent)
+		case map[string]any:
+			configStr += indentStr + name + "=" + "\n"
+			configStr += encodeConfigGroupString(value.(map[string]any), indent)
 			configStr += ",\n"
+		default:
+			logger.Log.Debugf("invalid libconfig type\n")
 		}
 	}
 
 	return configStr
 }
 
-func encodeConfigArrayString(array *ArrayT, indent int) (configStr string) {
+func encodeConfigArrayString(array []string, indent int) (configStr string) {
 	var indentStr string
 	for i := 0; i < indent; i++ {
 		indentStr += "  "
 	}
 
 	configStr += indentStr + "[\n" + indentStr + "  "
-	for _, primitive := range array.Primitives {
-		configStr += primitive.Value + ", "
+	for _, primitive := range array {
+		configStr += primitive + ", "
 	}
 	configStr += "\n" + indentStr + "]"
 	return configStr
 }
 
-func encodeConfigGroupString(group *GroupT, indent int) (configStr string) {
+func encodeConfigGroupString(group map[string]any, indent int) (configStr string) {
 	var indentStr string
 	for i := 0; i < indent; i++ {
 		indentStr += "  "
 	}
 
 	configStr += indentStr + "{\n"
-	configStr += encodeConfigSettingString(group.Settings, indent+1)
+	configStr += encodeConfigSettingString(group, indent+1)
 	configStr += indentStr + "}"
 	return configStr
 }
 
-func encodeConfigListString(list *ListT, indent int) (configStr string) {
+func encodeConfigListString(list []any, indent int) (configStr string) {
 	var indentStr string
 	for i := 0; i < indent; i++ {
 		indentStr += "  "
 	}
 
 	configStr += indentStr + "(\n"
-	for _, settingValue := range list.SettingValues {
-		if settingValue.Primitive != nil {
-			configStr += "  " + settingValue.Primitive.Value + ",\n"
+	for index, value := range list {
+		switch value.(type) {
+		case string:
+			configStr += value.(string)
+		case []string:
+			configStr += encodeConfigArrayString(value.([]string), indent+1)
+		case []any:
+			configStr += encodeConfigListString(value.([]any), indent+1)
+		case map[string]any:
+			configStr += encodeConfigGroupString(value.(map[string]any), indent+1)
+		default:
+			logger.Log.Debugf("invalid libconfig type\n")
 		}
 
-		if settingValue.Array != nil {
-			configStr += encodeConfigArrayString(settingValue.Array, indent+1)
-			configStr += ",\n"
-		}
-
-		if settingValue.Group != nil {
-			configStr += encodeConfigGroupString(settingValue.Group, indent+1)
-			configStr += ",\n"
-		}
-
-		if settingValue.List != nil {
-			configStr += encodeConfigListString(settingValue.List, indent+1)
+		if index < len(list)-1 {
 			configStr += ",\n"
 		}
 	}
-	configStr += indentStr + ")"
+
+	configStr += "\n" + indentStr + ")"
 	return configStr
 }

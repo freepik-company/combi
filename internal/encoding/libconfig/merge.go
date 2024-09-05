@@ -1,131 +1,81 @@
 package libconfig
 
+import "combi/internal/logger"
+
 // ----------------------------------------------------------------
 // Merge LIBCONFIG data structure
 // ----------------------------------------------------------------
-func (e *LibconfigT) GetConfigStruct() (config interface{}) {
+func (e *LibconfigT) GetConfigStruct() (config any) {
 	return e.ConfigStruct
 }
 
-func (e *LibconfigT) MergeConfigs(source interface{}) {
-	mergeSettings(&e.ConfigStruct.Settings, &(source.(*LIBCONFIG)).Settings)
+func (e *LibconfigT) MergeConfigs(source any) {
+	mergeSettings(e.ConfigStruct, source.(map[string]any))
 }
 
-func mergeSettings(destination *[]*SettingT, source *[]*SettingT) {
-	for _, sSetting := range *source {
-		// Merge settings with primitive
-		foundSetting := false
-		if sSetting.SettingValue.Primitive != nil {
-			for _, dSetting := range *destination {
-				if dSetting.SetingName == sSetting.SetingName {
-					foundSetting = true
-					dSetting.SettingValue.Primitive.Value = sSetting.SettingValue.Primitive.Value
-				}
-			}
+func mergeSettings(destination, source map[string]any) {
+	for srcKey, srcVal := range source {
+		if _, ok := destination[srcKey]; !ok {
+			destination[srcKey] = srcVal
+			continue
 		}
 
-		// Merge settings with group
-		if sSetting.SettingValue.Group != nil {
-			for _, dSetting := range *destination {
-				if dSetting.SetingName == sSetting.SetingName {
-					foundSetting = true
-					mergeSettingValueGroups(dSetting.SettingValue.Group, sSetting.SettingValue.Group)
-				}
-			}
-		}
-
-		// Merge settings with array
-		if sSetting.SettingValue.Array != nil {
-			for _, dSetting := range *destination {
-				if dSetting.SetingName == sSetting.SetingName {
-					foundSetting = true
-					mergeSettingValueArrays(dSetting.SettingValue.Array, sSetting.SettingValue.Array)
-				}
-			}
-		}
-
-		// Merge settings with list
-		if sSetting.SettingValue.List != nil {
-			for _, dSetting := range *destination {
-				if dSetting.SetingName == sSetting.SetingName {
-					foundSetting = true
-					mergeSettingValueLists(dSetting.SettingValue.List, sSetting.SettingValue.List)
-				}
-			}
-		}
-
-		// Append not found setting
-		if !foundSetting {
-			*destination = append(*destination, sSetting)
+		switch destination[srcKey].(type) {
+		case string, []string:
+			destination[srcKey] = srcVal
+		// case []string:
+		// 	mergeSettingArray(destination[srcKey].([]string), srcVal.([]string))
+		case []any:
+			tmp := destination[srcKey].([]any)
+			mergeSettingList(&tmp, srcVal.([]any))
+			destination[srcKey] = tmp
+		case map[string]any:
+			mergeSettings(destination[srcKey].(map[string]any), srcVal.(map[string]any))
+		default:
+			logger.Log.Debugf("invalid libconfig type\n")
 		}
 	}
 }
 
-func mergeSettingValueArrays(destination *ArrayT, source *ArrayT) {
-	if len(source.Primitives) > 0 {
-		for _, sPrimitive := range source.Primitives {
-			found := false
-			for _, dPrimitive := range destination.Primitives {
-				if dPrimitive.Value == sPrimitive.Value {
-					found = true
-				}
-			}
-			if !found {
-				destination.Primitives = append(destination.Primitives, sPrimitive)
-			}
+// func mergeSettingArray(destination, source []string) {
+// 	gap := len(source) - len(destination)
+// 	if gap > 0 {
+// 		for i := 0; i < gap; i++ {
+// 			destination = append(destination, "")
+// 		}
+// 	}
+// 	for srcIndex, srcVal := range source {
+// 		destination[srcIndex] = srcVal
+// 	}
+// }
+
+func mergeSettingList(destination *[]any, source []any) {
+	gap := len(source) - len(*destination)
+	if gap > 0 {
+		for i := 0; i < gap; i++ {
+			*destination = append(*destination, nil)
 		}
 	}
-}
-
-func mergeSettingValueGroups(destination *GroupT, source *GroupT) {
-	if len(source.Settings) > 0 {
-		mergeSettings(&destination.Settings, &source.Settings)
-	}
-}
-
-func mergeSettingValueLists(destination *ListT, source *ListT) {
-	if len(source.SettingValues) > 0 {
-		for _, sSettingValue := range source.SettingValues {
-			found := false
-			if sSettingValue.Primitive != nil {
-				for _, dSettingValue := range destination.SettingValues {
-					if dSettingValue.Primitive != nil && sSettingValue.Primitive.Value != dSettingValue.Primitive.Value {
-						found = true
-						dSettingValue.Primitive.Value = sSettingValue.Primitive.Value
-					}
+	for srcIndex, srcVal := range source {
+		switch srcVal.(type) {
+		case string, []string, []any:
+			(*destination)[srcIndex] = srcVal
+		// case []any:
+		// 	{
+		// 		if (*destination)[srcIndex] == nil {
+		// 			(*destination)[srcIndex] = []any{}
+		// 		}
+		// 		mergeSettingList((*destination)[srcIndex].([]any), srcVal.([]any))
+		// 	}
+		case map[string]any:
+			{
+				if (*destination)[srcIndex] == nil {
+					(*destination)[srcIndex] = map[string]any{}
 				}
+				mergeSettings((*destination)[srcIndex].(map[string]any), srcVal.(map[string]any))
 			}
-
-			if sSettingValue.Array != nil {
-				for _, dSettingValue := range destination.SettingValues {
-					if dSettingValue.Array != nil {
-						found = true
-						mergeSettingValueArrays(dSettingValue.Array, sSettingValue.Array)
-					}
-				}
-			}
-
-			if sSettingValue.Group != nil {
-				for _, dSettingValue := range destination.SettingValues {
-					if dSettingValue.Group != nil {
-						found = true
-						mergeSettingValueGroups(dSettingValue.Group, sSettingValue.Group)
-					}
-				}
-			}
-
-			if sSettingValue.List != nil {
-				for _, dSettingValue := range destination.SettingValues {
-					if dSettingValue.List != nil {
-						found = true
-						mergeSettingValueLists(dSettingValue.List, sSettingValue.List)
-					}
-				}
-			}
-
-			if !found {
-				destination.SettingValues = append(destination.SettingValues, sSettingValue)
-			}
+		default:
+			logger.Log.Debugf("invalid libconfig type\n")
 		}
 	}
 }
