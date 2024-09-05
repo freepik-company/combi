@@ -188,7 +188,7 @@ func parseSettingName(config string) (name string, diff int) {
 func parseSettingValuePrimitive(config string) (value string, diff int) {
 	configLen := len(config)
 	if config[0] == '"' {
-		for diff := 1; diff < configLen; diff++ {
+		for diff = 1; diff < configLen; diff++ {
 			if config[diff] == '"' && config[diff-1] != '\\' {
 				diff++
 				value = config[:diff]
@@ -197,7 +197,7 @@ func parseSettingValuePrimitive(config string) (value string, diff int) {
 		}
 	}
 
-	for diff := 1; diff < configLen; diff++ {
+	for diff = 1; diff < configLen; diff++ {
 		if isWhitespace(config[diff]) || isCloseValue(config[diff]) || isCloseScope(config[diff]) {
 			value = config[:diff]
 			return value, diff
